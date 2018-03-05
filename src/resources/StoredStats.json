@@ -1,13 +1,11 @@
 {
-  "shopcode": {
-    "area": 1,
-    "countOfVisitors": 10,
-    "returnedUnits": 0,
-    "rent": 100,
-    "cleaning": 100,
-    "utility": 100,
-    "salary": 1000,
-    //можно вытащить
-    "security": 1000
-  }
+  "shopcode": 100,
+  "area": 1,
+  "countOfVisitors": 10,
+  "returnedUnits": 0,
+  "rent": 100,
+  "cleaning": 100,
+  "utility": 100,
+  "salary": 1000,
+  "security": 1000
 }

@@ -1,3 +1,5 @@
+package ShopServer
+
 import java.sql.{Connection, Date, DriverManager, ResultSet, Statement}
 import java.util.Calendar
 
@@ -111,6 +113,8 @@ object ShopServerStarter {
   }
 
   def main(args: Array[String]): Unit = {
+
+
     //deployDB()
     getStats()
 
