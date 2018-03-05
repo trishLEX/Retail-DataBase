@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS ShopDB.shopschema.Check
   date TIMESTAMP WITH TIME ZONE NOT NULL UNIQUE ,
   totalCostWithTax MONEY NOT NULL,
   totalCostWithoutTax MONEY NOT NULL,
-  typeOfPay BIT NOT NULL,
+  isByCard BOOLEAN NOT NULL DEFAULT FALSE,
   discount SMALLINT DEFAULT 0,
   employeeCode INT,
   shopCode INT,
@@ -164,7 +164,7 @@ $$ LANGUAGE plpgsql;
 CREATE TABLE IF NOT EXISTS ShopDB.shopschema.ItemType
 (
   sku INT PRIMARY KEY NOT NULL,
-  itemName VARCHAR(50) UNIQUE NOT NULL,
+  itemName VARCHAR(50) NOT NULL,
   description VARCHAR(100),
   sex SEX NOT NULL,
   type item_type NOT NULL,
@@ -205,7 +205,7 @@ CREATE TABLE IF NOT EXISTS ShopDB.shopschema.Check_Item_INT
   count INT NOT NULL CHECK (count > 0),
   costOfPositionWithTax MONEY NOT NULL,
   costOfPositionWithoutTax MONEY NOT NULL,
-  discountOfPosition SMALLINT NOT NULL CHECK (discountOfPosition >= 0),
+  discountOfPosition SMALLINT NOT NULL CHECK (discountOfPosition >= 0) DEFAULT 0,
   isReturned BOOLEAN NOT NULL DEFAULT FALSE,
 
   PRIMARY KEY (checkID, itemID, sku),
@@ -340,7 +340,10 @@ BEGIN
   ELSE
     RAISE EXCEPTION 'Invalid color --> %', color;
   END IF;
-  code = code || size::VARCHAR;
+
+  IF (size != '-1') THEN
+    code = code || size::VARCHAR;
+  END IF;
 
   IF (code::INT = itemid) THEN
     RETURN TRUE;
@@ -363,3 +366,31 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tr_insert_item BEFORE INSERT
   ON shopdb.shopschema.Item
   FOR EACH ROW EXECUTE PROCEDURE shopdb.shopschema.insert_item();
+
+CREATE OR REPLACE FUNCTION shopdb.shopschema.insert_card_int() RETURNS TRIGGER AS $$
+BEGIN
+  IF NOT new.cardid IN (SELECT cardid FROM dblink('dbname=maindb port=5432 user=postgres password=0212', 'SELECT cardid FROM ShopSchema.card')
+    AS cards(cardid INT)) THEN
+    RAISE EXCEPTION 'invalid cardID';
+  ELSE
+    RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tr_insert_card_int BEFORE INSERT
+  ON shopdb.shopschema.Card_Check_INT
+  FOR EACH ROW EXECUTE PROCEDURE shopdb.shopschema.insert_card_int();
+
+--INDEXES AND VIEWS--
+CREATE MATERIALIZED VIEW shopdb.shopschema.items
+  AS
+    SELECT c.checkid, c.itemid, c.sku, itemname, sex, type, model, size, color, count,
+      costofpositionwithouttax, costofpositionwithtax , discountofposition, isreturned, date, isbycard,
+      discount, totalcostwithouttax, totalcostwithtax
+    FROM shopdb.shopschema.check_item_int c
+      JOIN shopdb.shopschema.item i ON c.itemid = i.itemid AND c.sku = i.sku
+      JOIN shopdb.shopschema.itemtype i2 ON i.sku = i2.sku
+      JOIN shopdb.shopschema."check" ch ON c.checkid = ch.checkid ORDER BY checkid;
+
+CREATE UNIQUE INDEX IF NOT EXISTS items_index ON shopdb.shopschema.items (checkid, itemid, sku);
