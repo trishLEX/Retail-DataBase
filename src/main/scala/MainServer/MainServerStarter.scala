@@ -11,11 +11,11 @@ trait StoredStatsJsonProtocol extends SprayJsonSupport with  DefaultJsonProtocol
   implicit val jsonProtocol = jsonFormat8(StoredStats)
 }
 
-object MainServerStarter extends App with MainServer.StoredStatsJsonProtocol{
+object MainServerStarter extends App with StoredStatsJsonProtocol{
   override def main(args: Array[String]): Unit = {
     implicit val system = ActorSystem("MainServer")
     implicit val materializer = ActorMaterializer()
-    //implicit val executionContext = system.dispatcher
+    implicit val executionContext = system.dispatcher
 
     val serverActor = system.actorOf(Props[serverActor], "serverActor")
 

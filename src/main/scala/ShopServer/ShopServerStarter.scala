@@ -3,17 +3,25 @@ package ShopServer
 import java.sql.{Connection, Date, DriverManager, ResultSet, Statement}
 import java.util.Calendar
 
+import MainServer.StoredStats
+import akka.actor.{ActorSystem, Props}
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.stream.ActorMaterializer
+import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
 import org.json4s.DefaultFormats
+import spray.json.DefaultJsonProtocol
 
-object ShopServerStarter {
+trait StoredStatsJsonProtocol extends SprayJsonSupport with  DefaultJsonProtocol{
+  implicit val jsonProtocol = jsonFormat8(StoredStats)
+}
+
+object ShopServerStarter extends App with StoredStatsJsonProtocol {
   //Need to set PGPASSWORD
   val PATH_TO_CREATEDB = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\sql\\CreateDB.sql"
   val PATH_TO_DBSource = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\sql\\DBSource.sql"
 
   implicit val formats = DefaultFormats
 
-  case class StoredStats(shopcode: Int, area: Float, countOfVisitors: Int, returnedUnits: Int, rent: Float, cleaning: Float,
-                         utility: Float, security: Float)
   case class StatsOfDay(shopcode: Int, countOfVisitors: Int, countOfChecks: Int, CR: Float, countOfSoldUnits: Int, UPT: Float,
                         proceedsWithTax: Float, proceedsWithoutTax: Float, avgCheck: Float, returnedUnits: Int, salesPerArea: Float)
   case class Costs(shopcode: Int, rent: Float, cleaning: Float, utility: Float, salary: Float, security: Float)
@@ -112,28 +120,25 @@ object ShopServerStarter {
     }
   }
 
-  def main(args: Array[String]): Unit = {
+  override def main(args: Array[String]): Unit = {
 
+    implicit val system = ActorSystem("ShopServer")
+    implicit val materializer = ActorMaterializer()
+    implicit val executionContext = system.dispatcher
 
+//    val stats = StoredStats(100, 100, 1, 0, 100, 100, 100, 100).toJson
+//    val request = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, stats.prettyPrint))
+//    Http().singleRequest(request)
+
+    val serverActor = system.actorOf(Props[shopActor], "serverActor")
+    val now = Calendar.getInstance().getTime
+    val scheduler = QuartzSchedulerExtension(system)
+    scheduler.createSchedule("every53minutes", cronExpression = "20 27 16 ? * *")  //настоящее время 19, т.к. время по гринвичу, для москвы +3
+    QuartzSchedulerExtension(system).schedule("every53minutes", serverActor, "00")
+
+    //println(now)
+    //system.scheduler.schedule(now)
     //deployDB()
-    getStats()
-
-//    val connection = "jdbc:postgresql://localhost:5432/maindb?user=postgres&password=0212"
-//
-//    classOf[org.postgresql.Driver]
-//
-//    val conn = DriverManager.getConnection(connection)
-//
-//    try {
-//      val stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
-//
-//      val rs = stmt.executeQuery("SELECT * FROM shopschema.shops")
-//
-//      while (rs.next())
-//        println(rs.getString("shopCode"))
-//    }
-//    finally {
-//      conn.close()
-//    }
+    //getStats()
   }
 }
