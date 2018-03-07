@@ -94,6 +94,8 @@ class shopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
     } catch {
       case e: Exception => e.printStackTrace(); null
+    } finally {
+      connection.close()
     }
   }
 }
