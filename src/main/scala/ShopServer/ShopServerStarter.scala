@@ -18,7 +18,7 @@ trait StoredStatsJsonProtocol extends SprayJsonSupport with  DefaultJsonProtocol
 object ShopServerStarter extends App with StoredStatsJsonProtocol {
   //Need to set PGPASSWORD
   val PATH_TO_CREATEDB = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\sql\\CreateDB.sql"
-  val PATH_TO_DBSource = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\sql\\DBSource.sql"
+  val PATH_TO_DBSource = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\sql\\ShopDBSource.sql"
 
   implicit val formats = DefaultFormats
 
@@ -130,11 +130,11 @@ object ShopServerStarter extends App with StoredStatsJsonProtocol {
 //    val request = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, stats.prettyPrint))
 //    Http().singleRequest(request)
 
-    val serverActor = system.actorOf(Props[shopActor], "serverActor")
+    val shopActor = system.actorOf(Props[shopActor], "serverActor")
     val now = Calendar.getInstance().getTime
     val scheduler = QuartzSchedulerExtension(system)
-    scheduler.createSchedule("every53minutes", cronExpression = "20 27 16 ? * *")  //настоящее время 19, т.к. время по гринвичу, для москвы +3
-    QuartzSchedulerExtension(system).schedule("every53minutes", serverActor, "00")
+    scheduler.createSchedule("scheduler", cronExpression = "20 27 16 ? * *")  //настоящее время 19, т.к. время по гринвичу, для москвы +3
+    QuartzSchedulerExtension(system).schedule("scheduler", shopActor, "00")
 
     //println(now)
     //system.scheduler.schedule(now)

@@ -1,4 +1,3 @@
-CREATE DATABASE ShopDB;
 CREATE SCHEMA ShopSchema;
 
 SET SEARCH_PATH = 'shopschema';
@@ -71,10 +70,7 @@ CREATE TABLE IF NOT EXISTS ShopDB.shopschema.Shop
   isClosed BOOLEAN NOT NULL DEFAULT FALSE,
 
   area FLOAT NOT NULL,
-  lease MONEY NOT NULL,
-  costs MONEY NOT NULL,
-
-  stats JSONB NOT NULL
+  countOfVisitorsToday INT NOT NULL CHECK (countOfVisitorsToday >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS ShopDB.shopschema.Employee
