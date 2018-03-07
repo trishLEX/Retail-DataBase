@@ -7,15 +7,15 @@ import akka.stream.ActorMaterializer
 import spray.json._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 
-trait StoredStatsJsonProtocol extends SprayJsonSupport with  DefaultJsonProtocol{
-  implicit val jsonProtocol = jsonFormat11(Stats)
-}
+object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProtocol {
 
-object MainServerStarter extends App with StoredStatsJsonProtocol{
   override def main(args: Array[String]): Unit = {
+
     implicit val system = ActorSystem("MainServer")
     implicit val materializer = ActorMaterializer()
     implicit val executionContext = system.dispatcher
+
+    implicit val jsonProtocol = jsonFormat11(Stats)
 
     val serverActor = system.actorOf(Props[serverActor], "serverActor")
 

@@ -4,7 +4,7 @@ import akka.actor.{ActorSystem, Props}
 import akka.stream.ActorMaterializer
 //import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
 
-object ShopServerStarter extends App with StatsJsonProtocol {
+object ShopServerStarter extends App {
   //Need to set PGPASSWORD
   val PATH_TO_CREATEDB = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\sql\\CreateDB.sql"
   val PATH_TO_DBSource = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\sql\\ShopDBSource.sql"

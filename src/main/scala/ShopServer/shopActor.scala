@@ -9,11 +9,9 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest}
 import spray.json._
 
-trait StatsJsonProtocol extends SprayJsonSupport with DefaultJsonProtocol{
+class shopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   implicit val jsonProtocol = jsonFormat11(Stats)
-}
 
-class shopActor extends Actor with StatsJsonProtocol {
   override def receive: Receive = {
     case "GO" => {
       //val stats = getStats().toJson
