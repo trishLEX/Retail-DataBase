@@ -8,7 +8,7 @@ import spray.json._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 
 trait StoredStatsJsonProtocol extends SprayJsonSupport with  DefaultJsonProtocol{
-  implicit val jsonProtocol = jsonFormat8(StoredStats)
+  implicit val jsonProtocol = jsonFormat11(Stats)
 }
 
 object MainServerStarter extends App with StoredStatsJsonProtocol{
@@ -22,7 +22,7 @@ object MainServerStarter extends App with StoredStatsJsonProtocol{
     val route =
     {
       post {
-        entity(as[StoredStats]) {
+        entity(as[Stats]) {
           stats => complete {
             serverActor ! stats
             "OK"
