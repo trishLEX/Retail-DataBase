@@ -390,3 +390,10 @@ CREATE MATERIALIZED VIEW shopdb.shopschema.items
       JOIN shopdb.shopschema."check" ch ON c.checkid = ch.checkid ORDER BY checkid;
 
 CREATE UNIQUE INDEX IF NOT EXISTS items_index ON shopdb.shopschema.items (checkid, itemid, sku);
+CREATE INDEX IF NOT EXISTS items_date_index ON shopdb.shopschema.items (date);
+
+CREATE MATERIALIZED VIEW shopdb.shopschema.cards_purchases AS
+  SELECT cardid, c1.checkid, c2.date, unnest(purchases[:][1:1]) AS sku, unnest(purchases[:][2:2]) AS itemid, c2.totalcostwithtax
+  FROM shopdb.shopschema.card_check_int c1 JOIN shopdb.shopschema."check" c2 ON c1.checkid = c2.checkid;
+
+CREATE INDEX IF NOT EXISTS cards_date_index ON shopdb.shopschema.cards_purchases (date);
