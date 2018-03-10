@@ -1,7 +1,8 @@
 package ShopServer
 
-case class ShopStats(
-                  shopcode: Int,
+case class ShopStats(shopCode: Int, stats: Stats)
+
+case class Stats(
                   countOfVisitors: Int,
                   countOfChecks: Int,
                   CR: Float,

@@ -8,7 +8,8 @@ import org.postgresql.util.PGobject
 import spray.json._
 
 class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
-  implicit val jsonShopStats = jsonFormat11(ShopStats)
+  implicit val jsonStats = jsonFormat10(Stats)
+  implicit val jsonShopStats = jsonFormat2(ShopStats)
   implicit val jsonCardsStats = jsonFormat3(CardsStats)
 
   private val connectionString = "jdbc:postgresql://localhost:5432/maindb?user=postgres&password=0212"
@@ -37,11 +38,11 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
 
   private def insertShopStats(connection: Connection, statement: Statement, stats: ShopStats): Unit = {
     val preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Shops SET stats = ?::jsonb WHERE shopCode = ?")
-    preparedStatement.setString(1, stats.toJson.toString)
-    preparedStatement.setInt(2, stats.shopcode)
+    preparedStatement.setString(1, stats.stats.toJson.toString)
+    preparedStatement.setInt(2, stats.shopCode)
     preparedStatement.execute()
 
-    println("INSERTED SHOP STATS: " + stats)
+    println("INSERTED SHOP STATS: " + stats.stats)
   }
 
   private def insertCardsStats(statsList: List[CardsStats]): Unit = {

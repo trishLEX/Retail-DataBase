@@ -4,6 +4,7 @@ import akka.actor.{ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.stream.ActorMaterializer
 import spray.json._
 
@@ -15,7 +16,8 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
     implicit val materializer = ActorMaterializer()
     implicit val executionContext = system.dispatcher
 
-    implicit val jsonShopStats = jsonFormat11(ShopStats)
+    implicit val jsonStats = jsonFormat10(Stats)
+    implicit val jsonShopStats = jsonFormat2(ShopStats)
     implicit val jsonCardsStats = jsonFormat3(CardsStats)
 
     val serverActor = system.actorOf(Props[ServerActor], "serverActor")
@@ -26,13 +28,13 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
         entity(as[ShopStats]) {
           stats => complete {
             serverActor ! stats
-            "OK"
+            HttpResponse(StatusCodes.OK)
           }
-        }
+        } ~
         entity(as[List[CardsStats]]) {
           stats => complete {
             serverActor ! stats
-            "OK"
+            HttpResponse(StatusCodes.OK)
           }
         }
       }

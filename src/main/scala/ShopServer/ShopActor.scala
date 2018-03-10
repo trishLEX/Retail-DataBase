@@ -10,7 +10,8 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequ
 import spray.json._
 
 class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
-  implicit val jsonShopStats = jsonFormat11(ShopStats)
+  implicit val jsonStats = jsonFormat10(Stats)
+  implicit val jsonShopStats = jsonFormat2(ShopStats)
   implicit val jsonCardsStats = jsonFormat3(CardsStats)
 
   override def receive: Receive = {
@@ -22,7 +23,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       println(shopStats)
       println(cardsStats)
 
-      //val stats = ShopStats(100, 100, 1, 0, 100, 100, 100, 100, 0, 0, 0).toJson
+      //val shopStats = ShopStats(100, Stats(100, 1, 0, 100, 100, 100, 100, 0, 0, 0)).toJson
 
       val shopStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, shopStats.prettyPrint))
       val cardsStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, cardsStats.prettyPrint))
@@ -82,8 +83,8 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
     val salesPerArea = totalCostWithTax / res.getString("area").toFloat
 
-    ShopStats(res.getString("shopcode").toInt, countOfVisitors, countOfChecks.toInt, CR,
-      countOfSoldUnits.toInt, UPT, totalCostWithTax, totalCostWithoutTax, avgCheck, returnedUnits, salesPerArea)
+    ShopStats(res.getString("shopcode").toInt, Stats(countOfVisitors, countOfChecks.toInt, CR,
+      countOfSoldUnits.toInt, UPT, totalCostWithTax, totalCostWithoutTax, avgCheck, returnedUnits, salesPerArea))
   }
 
   private def getCardsStats(connection: Connection, shopCode: Int, today: Date): List[CardsStats] = {
@@ -126,7 +127,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       stmt.execute("REFRESH MATERIALIZED VIEW shopdb.shopschema.items")
 
       val dayStats = getStatsOfDay(connection, stmt, today)
-      val cardsStats = getCardsStats(connection, dayStats.shopcode, today)
+      val cardsStats = getCardsStats(connection, dayStats.shopCode, today)
 
       (dayStats, cardsStats)
 
