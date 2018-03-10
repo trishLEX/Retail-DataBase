@@ -9,20 +9,30 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest}
 import spray.json._
 
-class shopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
-  implicit val jsonProtocol = jsonFormat11(Stats)
+class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
+  implicit val jsonShopStats = jsonFormat11(ShopStats)
+  implicit val jsonCardsStats = jsonFormat3(CardsStats)
 
   override def receive: Receive = {
     case "GO" => {
-      //val stats = getStats().toJson
-      val stats = Stats(100, 100, 1, 0, 100, 100, 100, 100, 0, 0, 0).toJson
+      val stats = getStats()
+      val shopStats = stats._1.toJson
+      val cardsStats = stats._2.toJson
 
-      val request = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, stats.prettyPrint))
-      Http(context.system).singleRequest(request)
+      println(shopStats)
+      println(cardsStats)
+
+      //val stats = ShopStats(100, 100, 1, 0, 100, 100, 100, 100, 0, 0, 0).toJson
+
+      val shopStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, shopStats.prettyPrint))
+      val cardsStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, cardsStats.prettyPrint))
+
+      Http(context.system).singleRequest(shopStatsReq)
+      Http(context.system).singleRequest(cardsStatsReq)
     }
   }
 
-  private def getStatsOfDay(connection: Connection, stmt: Statement, today: Date): Stats = {
+  private def getStatsOfDay(connection: Connection, stmt: Statement, today: Date): ShopStats = {
     val res = stmt.executeQuery("SELECT shopcode, countofvisitorstoday, area FROM shopschema.shop;")
     res.next()
 
@@ -72,11 +82,36 @@ class shopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
     val salesPerArea = totalCostWithTax / res.getString("area").toFloat
 
-    Stats(res.getString("shopcode").toInt, countOfVisitors, countOfChecks.toInt, CR,
+    ShopStats(res.getString("shopcode").toInt, countOfVisitors, countOfChecks.toInt, CR,
       countOfSoldUnits.toInt, UPT, totalCostWithTax, totalCostWithoutTax, avgCheck, returnedUnits, salesPerArea)
   }
 
-  private def getStats(): Stats = {
+  private def getCardsStats(connection: Connection, shopCode: Int, today: Date): List[CardsStats] = {
+    var preparedStatement = connection.prepareStatement("SELECT cardid, totalcostwithtax::NUMERIC::FLOAT, array_agg(sku) as purchases FROM shopdb.shopschema.cards_purchases GROUP BY cardid, date, totalcostwithtax HAVING date = '2018-01-01' OR date = '2018-01-06'")
+    //preparedStatement.setDate(1, today)
+    var resultSet = preparedStatement.executeQuery()
+
+    def iter: Iterator[ResultSet] = new Iterator[ResultSet] {
+      val rs = resultSet
+      override def hasNext: Boolean = rs.next()
+      override def next(): ResultSet = rs
+    }
+
+    val stats = for (rs <- iter) yield {
+      val purchases = resultSet.getString("purchases").replace("{", "").replace("}", "").split(",").map(_.toInt).toList
+
+      CardsStats(resultSet.getInt("cardID"), resultSet.getFloat("totalcostwithtax"),
+        Map(shopCode.toString ->
+          purchases
+            .map(_.toString)
+            .zip(purchases.map(sku => purchases.count(_ == sku)))
+            .toMap))
+    }
+
+    stats.toList
+  }
+
+  private def getStats(): (ShopStats, List[CardsStats]) = {
     val connectionString = "jdbc:postgresql://localhost:5432/shopdb?user=postgres&password=0212"
 
     classOf[org.postgresql.Driver]
@@ -90,7 +125,10 @@ class shopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
       stmt.execute("REFRESH MATERIALIZED VIEW shopdb.shopschema.items")
 
-      getStatsOfDay(connection, stmt, today)
+      val dayStats = getStatsOfDay(connection, stmt, today)
+      val cardsStats = getCardsStats(connection, dayStats.shopcode, today)
+
+      (dayStats, cardsStats)
 
     } catch {
       case e: Exception => e.printStackTrace(); null

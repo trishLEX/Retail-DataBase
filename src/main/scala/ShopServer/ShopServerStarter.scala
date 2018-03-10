@@ -21,7 +21,7 @@ object ShopServerStarter extends App {
     implicit val materializer = ActorMaterializer()
     implicit val executionContext = system.dispatcher
 
-    val shopActor = system.actorOf(Props[shopActor], "serverActor")
+    val shopActor = system.actorOf(Props[ShopActor], "serverActor")
 
 //    TODO добавить в production:
 //    val scheduler = QuartzSchedulerExtension(system)
