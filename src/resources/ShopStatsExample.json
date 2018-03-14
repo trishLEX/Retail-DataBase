@@ -1,102 +1,48 @@
 {
-  "shopcode": {
-    "statsOfDay": {
-      "countOfVisitiors": 1,
-      "countOfChecks": 1,
-      "CR": 1.0,
-      //countOfchecks / countOfVisitors
-      "countOfSoldUnits": 2,
-      "UPT": 2.0,
-      //countOfSoldUnits / countOfChecks
-      "proceedsWithTax": 1200,
-      "proceedsWithoutTax": 1000,
-      "avgCheck": 1200.0,
-      //proceedsWithTax / countOfChecks
-      "returnedUnits": 0,
-      "salesPerArea": 1200.0
-      //proceedsWithTax / area
-    },
-    "statsOfWeek": {
-      "countOfVisitiors": 1,
-      "countOfChecks": 1,
-      "CR": 1.0,
-      //countOfchecks / countOfVisitors
-      "countOfSoldUnits": 2,
-      "UPT": 2.0,
-      //countOfSoldUnits / countOfChecks
-      "proceedsWithTax": 1200,
-      "proceedsWithoutTax": 1000,
-      "avgCheck": 1200.0,
-      //proceedsWithTax / countOfChecks
-      "returnedUnits": 0,
-      "salesPerArea": 1200.0
-      //proceedsWithTax / area
-    },
-    "statsOfMonth": {
-      "countOfVisitiors": 1,
-      "countOfChecks": 1,
-      "CR": 1.0,
-      //countOfchecks / countOfVisitors
-      "countOfSoldUnits": 2,
-      "UPT": 2.0,
-      //countOfSoldUnits / countOfChecks
-      "proceedsWithTax": 1200,
-      "proceedsWithoutTax": 1000,
-      "avgCheck": 1200.0,
-      //proceedsWithTax / countOfChecks
-      "returnedUnits": 0,
-      "salesPerArea": 1200.0,
-      //proceedsWithTax / area
-
-      "rent": 100,
-      "cleaning": 100,
-      "utility": 100,
-      "salary": 1000,
-      "security": 1000
-    },
-    "statsOfSeason": {
-      "countOfVisitiors": 1,
-      "countOfChecks": 1,
-      "CR": 1.0,
-      //countOfchecks / countOfVisitors
-      "countOfSoldUnits": 2,
-      "UPT": 2.0,
-      //countOfSoldUnits / countOfChecks
-      "proceedsWithTax": 1200,
-      "proceedsWithoutTax": 1000,
-      "avgCheck": 1200.0,
-      //proceedsWithTax / countOfChecks
-      "returnedUnits": 0,
-      "salesPerArea": 1200.0,
-      //proceedsWithTax / area
-
-      "rent": 100,
-      "cleaning": 100,
-      "utility": 100,
-      "salary": 1000,
-      "security": 1000
-    },
-    "statsOfYear": {
-      "countOfVisitiors": 1,
-      "countOfChecks": 1,
-      "CR": 1.0,
-      //countOfchecks / countOfVisitors
-      "countOfSoldUnits": 2,
-      "UPT": 2.0,
-      //countOfSoldUnits / countOfChecks
-      "proceedsWithTax": 1200,
-      "proceedsWithoutTax": 1000,
-      "avgCheck": 1200.0,
-      //proceedsWithTax / countOfChecks
-      "returnedUnits": 0,
-      "salesPerArea": 1200.0,
-      //proceedsWithTax / area
-
-      "rent": 100,
-      "cleaning": 100,
-      "utility": 100,
-      "salary": 1000,
-      "security": 1000
-    }
-  }
+  "statsOfDay": {
+    "CR": 0.0,
+    "UPT": 100.0,
+    "avgCheck": 0.0,
+    "salesPerArea": 0.0,
+    "countOfChecks": 1,
+    "returnedUnits": 0,
+    "countOfVisitors": 100,
+    "proceedsWithTax": 100.0,
+    "countOfSoldUnits": 100,
+    "proceedsWithoutTax": 100.0
+  },
+  "statsOfWeek": {
+    "CR": 0.0,
+    "UPT": 100.0,
+    "avgCheck": 0.0,
+    "salesPerArea": 0.0,
+    "countOfChecks": 1,
+    "returnedUnits": 0,
+    "countOfVisitors": 100,
+    "proceedsWithTax": 100.0,
+    "countOfSoldUnits": 100,
+    "proceedsWithoutTax": 100.0
+  },
+  "statsOfYear": {
+    "CR": 0.0,
+    "UPT": 100.0,
+    "avgCheck": 0.0,
+    "salesPerArea": 0.0,
+    "countOfChecks": 1,
+    "returnedUnits": 0,
+    "countOfVisitors": 100,
+    "proceedsWithTax": 100.0,
+    "countOfSoldUnits": 100,
+    "proceedsWithoutTax": 100.0},
+  "statsOfMonth": {
+    "CR": 0.0,
+    "UPT": 100.0,
+    "avgCheck": 0.0,
+    "salesPerArea": 0.0,
+    "countOfChecks": 1,
+    "returnedUnits": 0,
+    "countOfVisitors": 100,
+    "proceedsWithTax": 100.0,
+    "countOfSoldUnits": 100,
+    "proceedsWithoutTax": 100.0}
 }
