@@ -13,4 +13,9 @@ case class Stats(
                   avgCheck: Float,
                   returnedUnits: Int,
                   salesPerArea: Float
-                )
+                ) {
+  def +(other: Stats) = Stats(countOfVisitors + other.countOfVisitors, countOfChecks + other.countOfChecks, -1,
+    countOfSoldUnits + other.countOfChecks, -1,
+    proceedsWithTax + other.proceedsWithTax, proceedsWithoutTax + other.proceedsWithoutTax,
+    -1, returnedUnits + other.returnedUnits, salesPerArea + other.salesPerArea)
+}

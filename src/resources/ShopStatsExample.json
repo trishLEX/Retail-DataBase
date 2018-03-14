@@ -33,7 +33,8 @@
     "countOfVisitors": 100,
     "proceedsWithTax": 100.0,
     "countOfSoldUnits": 100,
-    "proceedsWithoutTax": 100.0},
+    "proceedsWithoutTax": 100.0
+  },
   "statsOfMonth": {
     "CR": 0.0,
     "UPT": 100.0,
@@ -44,5 +45,6 @@
     "countOfVisitors": 100,
     "proceedsWithTax": 100.0,
     "countOfSoldUnits": 100,
-    "proceedsWithoutTax": 100.0}
+    "proceedsWithoutTax": 100.0
+  }
 }
