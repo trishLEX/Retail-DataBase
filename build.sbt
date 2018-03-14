@@ -1,4 +1,4 @@
-name := "Retail-DataBase"
+name := "RetailDB"
 
 version := "0.1"
 
