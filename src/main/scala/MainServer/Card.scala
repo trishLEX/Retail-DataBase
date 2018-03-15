@@ -12,5 +12,3 @@ case class Card(cardID: Int, totalCost: Float, statMap: Map[String, Map[String, 
 }
 
 case class CardStats(cardID: Int, stats: Map[String, Map[String, Int]])
-
-case class CardStatsAnalyzed (cardID: Int, mostPurchasedItems: List[Int], favoriteShop: Int)
