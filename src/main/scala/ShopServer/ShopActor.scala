@@ -12,7 +12,7 @@ import spray.json._
 class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   implicit val jsonStats = jsonFormat10(Stats)
   implicit val jsonShopStats = jsonFormat2(ShopStats)
-  implicit val jsonCardsStats = jsonFormat3(CardsStats)
+  implicit val jsonCardsStats = jsonFormat3(CardStats)
 
   override def receive: Receive = {
     case "GO" => {
@@ -87,7 +87,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       countOfSoldUnits.toInt, UPT, totalCostWithTax, totalCostWithoutTax, avgCheck, returnedUnits, salesPerArea))
   }
 
-  private def getCardsStats(connection: Connection, shopCode: Int, today: Date): List[CardsStats] = {
+  private def getCardsStats(connection: Connection, shopCode: Int, today: Date): List[CardStats] = {
     var preparedStatement = connection.prepareStatement("SELECT cardid, totalcostwithtax::NUMERIC::FLOAT, array_agg(sku) as purchases FROM shopdb.shopschema.cards_purchases GROUP BY cardid, date, totalcostwithtax HAVING date = '2018-01-01' OR date = '2018-01-06'")
     //preparedStatement.setDate(1, today)
     var resultSet = preparedStatement.executeQuery()
@@ -101,7 +101,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     val stats = for (rs <- iter) yield {
       val purchases = resultSet.getString("purchases").replace("{", "").replace("}", "").split(",").map(_.toInt).toList
 
-      CardsStats(resultSet.getInt("cardID"), resultSet.getFloat("totalcostwithtax"),
+      CardStats(resultSet.getInt("cardID"), resultSet.getFloat("totalcostwithtax"),
         Map(shopCode.toString ->
           purchases
             .map(_.toString)
@@ -112,7 +112,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     stats.toList
   }
 
-  private def getStats(): (ShopStats, List[CardsStats]) = {
+  private def getStats(): (ShopStats, List[CardStats]) = {
     val connectionString = "jdbc:postgresql://localhost:5432/shopdb?user=postgres&password=0212"
 
     classOf[org.postgresql.Driver]

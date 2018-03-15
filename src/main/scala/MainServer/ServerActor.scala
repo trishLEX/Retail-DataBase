@@ -10,13 +10,13 @@ import spray.json._
 class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
   implicit val jsonStats = jsonFormat10(Stats)
   implicit val jsonShopStats = jsonFormat2(ShopStats)
-  implicit val jsonCardsStats = jsonFormat3(CardsStats)
+  implicit val jsonCardsStats = jsonFormat3(CardStats)
 
   private val connectionString = "jdbc:postgresql://localhost:5432/maindb?user=postgres&password=0212"
 
   override def receive: Receive = {
     case shopStats: ShopStats => insertShopStats(shopStats)
-    case cardsStatsList: List[CardsStats] => insertCardsStats(cardsStatsList)
+    case cardsStatsList: List[CardStats] => insertCardsStats(cardsStatsList)
   }
 
   private def insertShopStats(stats: ShopStats): Unit = {
@@ -71,7 +71,7 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
     println("INSERTED SHOP STATS: " + json.parseJson.toString)
   }
 
-  private def insertCardsStats(statsList: List[CardsStats]): Unit = {
+  private def insertCardsStats(statsList: List[CardStats]): Unit = {
     classOf[org.postgresql.Driver]
 
     val connection = DriverManager.getConnection(connectionString)
@@ -88,7 +88,7 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
     }
   }
 
-  private def insertCardsStats(connection: Connection, statement: Statement, statsList: List[CardsStats]): Unit = {
+  private def insertCardsStats(connection: Connection, statement: Statement, statsList: List[CardStats]): Unit = {
     val cardIDs = for (stats <- statsList) yield stats.cardID
 
     val cardsArray = new PGobject
@@ -102,7 +102,7 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
       val storedStatMapJson = resultSet.getString("stats")
       val storedSum = resultSet.getFloat("totalSum")
 
-      val insertedStats = statsList.find((p: CardsStats) => p.cardID == storedCardID).get
+      val insertedStats = statsList.find((p: CardStats) => p.cardID == storedCardID).get
 
       val prpStmnt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = ?::jsonb, totalsum = ?::NUMERIC::MONEY WHERE cardID = ?")
 
@@ -116,7 +116,7 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
         println("INSERTED STATS: " + insertedStats)
 
       } else {
-        val storedCardStats = ("{\"cardID\":" + storedCardID + ", \"totalCost\":" + storedSum + ", \"statMap\":" + storedStatMapJson + "}").parseJson.convertTo[CardsStats]
+        val storedCardStats = ("{\"cardID\":" + storedCardID + ", \"totalCost\":" + storedSum + ", \"statMap\":" + storedStatMapJson + "}").parseJson.convertTo[CardStats]
 
         println("STORED STATS: " + storedCardStats)
         println("TO INSERT STATS: " + insertedStats)
@@ -132,5 +132,42 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
 
       prpStmnt.execute()
     }
+
+    analyzeStats(connection, statement, cardsArray)
   }
+
+  import scalaz.Scalaz._
+
+  private def analyzeStats(connection: Connection, statement: Statement, cardsArray: PGobject): Unit = {
+    val resultSet = statement.executeQuery(s"SELECT cardID, stats FROM MainDB.shopschema.Card WHERE cardID IN ($cardsArray)")
+
+    while (resultSet.next()) {
+      val cardID = resultSet.getInt("cardID")
+      val statMapJson = resultSet.getString("stats")
+
+      val card = Card(cardID, statMapJson.parseJson.convertTo[Map[String, Map[String, Int]]])
+
+      println(card.stats.values.toList)
+      println(card.stats.values.flatten)
+      println(card.stats.values.flatten.map(tuple => (tuple._1.charAt(1), tuple._2)))
+      println(sumList(card.stats.values.flatten.map(tuple => (tuple._1.charAt(1), tuple._2)).toList))
+      println()
+      println(card.stats.values.toList.filter(_.keys.size >= 2))
+    }
+  }
+
+  private def sumList(xs: List[(Char, Int)]): Map[Char, Int] = {
+    def recurs(lst: List[(Char, Int)], res: Map[Char, Int]): Map[Char, Int] = {
+      lst match {
+        case Nil => res
+        case x :: xs => recurs(xs, res |+| Map(x._1 -> x._2))
+      }
+    }
+
+    recurs(xs, Map.empty[Char, Int])
+  }
+
+//  private def makeAllPairs(xs: List[Map[String, Int]]) = {
+//    val pairs = for (x <- xs) for (map <- x) yield
+//  }
 }

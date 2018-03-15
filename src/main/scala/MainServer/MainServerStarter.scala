@@ -18,7 +18,7 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
 
     implicit val jsonStats = jsonFormat10(Stats)
     implicit val jsonShopStats = jsonFormat2(ShopStats)
-    implicit val jsonCardsStats = jsonFormat3(CardsStats)
+    implicit val jsonCardsStats = jsonFormat3(CardStats)
 
     val serverActor = system.actorOf(Props[ServerActor], "serverActor")
 
@@ -31,7 +31,7 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
             HttpResponse(StatusCodes.OK)
           }
         } ~
-        entity(as[List[CardsStats]]) {
+        entity(as[List[CardStats]]) {
           stats => complete {
             serverActor ! stats
             HttpResponse(StatusCodes.OK)
