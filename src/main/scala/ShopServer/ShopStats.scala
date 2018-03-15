@@ -12,5 +12,6 @@ case class Stats(
                   proceedsWithoutTax: Float,
                   avgCheck: Float,
                   returnedUnits: Int,
-                  salesPerArea: Float
+                  salesPerArea: Float,
+                  skuPairsFreq: Map[String, Int]
                 )
