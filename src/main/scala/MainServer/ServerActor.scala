@@ -148,24 +148,18 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
       val card = CardStats(cardID, statMapJson.parseJson.convertTo[Map[String, Map[String, Int]]])
 
       println(card.stats.values.toList)
-      println(card.stats.values.flatten)
-      println(card.stats.values.flatten.map(tuple => (tuple._1.charAt(1), tuple._2)))
-      println(sumList(card.stats.values.flatten.map(tuple => (tuple._1.charAt(1), tuple._2)).toList))
+      println(sumList(card.stats.values.flatten.toList))
     }
   }
 
-  private def sumList(xs: List[(Char, Int)]): Map[Char, Int] = {
-    def recurs(lst: List[(Char, Int)], res: Map[Char, Int]): Map[Char, Int] = {
+  private def sumList(xs: List[(String, Int)]): Map[String, Int] = {
+    def recurs(lst: List[(String, Int)], res: Map[String, Int]): Map[String, Int] = {
       lst match {
         case Nil => res
         case x :: xs => recurs(xs, res |+| Map(x._1 -> x._2))
       }
     }
 
-    recurs(xs, Map.empty[Char, Int])
+    recurs(xs, Map.empty[String, Int])
   }
-
-//  private def makeAllPairs(xs: List[Map[String, Int]]) = {
-//    val pairs = for (x <- xs) for (map <- x) y
-//  }
 }

@@ -85,14 +85,14 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     val salesPerArea = totalCostWithTax / res.getString("area").toFloat
 
     // new items:[{'(1, 2)': 4}, {'(1, 3)': 2}] //
-    preparedStatement = connection.prepareStatement("SELECT DISTINCT i1.checkid, i1.sku / 10 % 10 sku1, i2.sku / 10 % 10 sku2 " +
+    preparedStatement = connection.prepareStatement("SELECT DISTINCT i1.checkid, i1.sku sku1, i2.sku sku2 " +
       "FROM shopdb.shopschema.items i1 JOIN shopdb.shopschema.items i2 ON i1.checkid = i2.checkid AND i1.sku > i2.sku WHERE i1.date = '2018-01-01' OR i1.date = '2018-01-02';")
     //preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     var skuPairMap = Map.empty[String, Int]
 
     while (resultSet.next()) {
-      skuPairMap = skuPairMap |+| Map(("("+resultSet.getString("sku1")+","+resultSet.getString("sku2")+")") -> 1)
+      skuPairMap = skuPairMap |+| Map((resultSet.getInt("sku1"), resultSet.getInt("sku2")).toString -> 1)
     }
 
     println("skuPairMap: " + skuPairMap)
