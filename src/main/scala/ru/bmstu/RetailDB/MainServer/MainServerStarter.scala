@@ -1,4 +1,4 @@
-package MainServer
+package ru.bmstu.RetailDB.MainServer
 
 import akka.actor.{ActorSystem, Props}
 import akka.http.scaladsl.Http

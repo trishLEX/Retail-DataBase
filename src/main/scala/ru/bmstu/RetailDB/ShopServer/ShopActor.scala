@@ -1,37 +1,113 @@
-package ShopServer
+package ru.bmstu.RetailDB.ShopServer
 
+import java.io.File
 import java.sql._
 import java.util.Calendar
+import java.util.concurrent.locks.{Lock, ReentrantLock}
 
 import akka.actor.Actor
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest}
-import scalaz.Scalaz._
+import akka.http.scaladsl.model._
+import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
 import spray.json._
+
+import scala.io.Source
+import scala.util.{Failure, Success}
+import scalaz.Scalaz._
 
 class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   implicit val jsonStats = jsonFormat11(Stats)
   implicit val jsonShopStats = jsonFormat2(ShopStats)
   implicit val jsonCardsStats = jsonFormat3(CardStats)
+  implicit val executionContext = context.system.dispatcher
+  val lock: Lock = new ReentrantLock()
 
   override def receive: Receive = {
-    case "GO" => {
-      val stats = getStats()
-      val shopStats = stats._1.toJson
-      val cardsStats = stats._2.toJson
+    //TODO сделать для GO и RESEND константы
+    case "GO" => sendStats()
+    case "RESEND" => resend()
+  }
 
-      println(shopStats)
-      println(cardsStats)
+  private def sendStats() = {
+    val stats = getStats()
+    val shopStats = stats._1.toJson
+    val cardsStats = stats._2.toJson
 
-      //val shopStats = ShopStats(100, Stats(100, 1, 0, 100, 100, 100, 100, 0, 0, 0)).toJson
+    println(shopStats)
+    println(cardsStats)
 
-      val shopStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, shopStats.prettyPrint))
-      val cardsStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, cardsStats.prettyPrint))
+    //val shopStats = ShopStats(100, Stats(100, 1, 0, 100, 100, 100, 100, 0, 0, 0)).toJson
+    sendCache(List(new File(ShopServerStarter.PATH_TO_CARDS_CACHE), new File(ShopServerStarter.PATH_TO_SHOP_CACHE)))
 
-      Http(context.system).singleRequest(shopStatsReq)
-      Http(context.system).singleRequest(cardsStatsReq)
+    val shopStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, shopStats.prettyPrint))
+    val cardsStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, cardsStats.prettyPrint))
+
+    Http(context.system).singleRequest(shopStatsReq).onComplete{
+      case Success(response) => if (response.status != StatusCodes.OK) {println("ERROR IN SHOPSTATS REQUEST: " + response.status); resendStats(shopStats, 0)}
+      case Failure(error) => println("SHOPSTATS REQUEST FAILED: " + error.getMessage); resendStats(shopStats, 0)
     }
+
+    Http(context.system).singleRequest(cardsStatsReq).onComplete {
+      case Success(resp) => if (resp.status != StatusCodes.OK) {println("ERROR IN CARDSSTATS REQUEST: " + resp.status); resendStats(cardsStats, 1)}
+      case Failure(error) => println("CARDSSTATS REQUEST FAILED: " + error.getMessage); resendStats(cardsStats, 1)
+    }
+  }
+
+  private def sendCacheFile(file: File) = {
+    val srcBuffer = Source.fromFile(file)
+
+    Http(context.system)
+      .singleRequest(
+        HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, srcBuffer.mkString))
+      )
+      .onComplete(resp => {srcBuffer.close(); if (resp.get.status == StatusCodes.OK) file.delete()})
+  }
+
+  private def sendCache(dirs: List[File]) = {
+    dirs.foreach(_
+      .listFiles()
+      .foreach(file => sendCacheFile(file)))
+  }
+
+  private def resend() = {
+    val cardsDir = new File(ShopServerStarter.PATH_TO_CARDS_CACHE)
+
+    val shopDir = new File(ShopServerStarter.PATH_TO_SHOP_CACHE)
+
+    sendCache(List(cardsDir, shopDir))
+
+    if (cardsDir.list().length == 0 && shopDir.list().length == 0)
+      QuartzSchedulerExtension(context.system).cancelJob("resender")
+  }
+
+  private def resendStats(entity: JsValue, entityTypeCode: Int) = {
+    lock.lock()
+    if (entityTypeCode == 1)
+      cache(entity, ShopServerStarter.PATH_TO_CARDS_CACHE)
+    else if (entityTypeCode == 0)
+      cache(entity, ShopServerStarter.PATH_TO_SHOP_CACHE)
+    else
+      throw new RuntimeException("Invalid type code of entity: " + entityTypeCode)
+
+    val scheduler = QuartzSchedulerExtension(context.system)
+    if (!scheduler.runningJobs.contains("resender")) {
+      scheduler.createSchedule("resender", cronExpression = "0/20 * * ? * *")
+      scheduler.schedule("resender", self, "RESEND")
+    }
+    lock.unlock()
+  }
+
+  private def cache(entity: JsValue, path: String) = {
+    val dir = new File(path)
+
+    val name = "cache_file_" + dir.list().length + ".json"
+    val file = new File(path, name)
+
+    file.createNewFile()
+    file.setWritable(true)
+
+    scala.tools.nsc.io.File(path + "\\" + name).writeAll(entity.toString())
   }
 
   private def getStatsOfDay(connection: Connection, stmt: Statement, today: Date): ShopStats = {

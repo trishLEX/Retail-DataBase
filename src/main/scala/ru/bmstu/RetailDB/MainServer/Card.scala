@@ -1,4 +1,4 @@
-package MainServer
+package ru.bmstu.RetailDB.MainServer
 
 import scalaz.Scalaz._
 
