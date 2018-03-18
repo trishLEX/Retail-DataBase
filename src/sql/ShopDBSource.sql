@@ -397,3 +397,20 @@ CREATE MATERIALIZED VIEW shopdb.shopschema.cards_purchases AS
   FROM shopdb.shopschema.card_check_int c1 JOIN shopdb.shopschema."check" c2 ON c1.checkid = c2.checkid;
 
 CREATE INDEX IF NOT EXISTS cards_date_index ON shopdb.shopschema.cards_purchases (date);
+
+CREATE USER "Admin" WITH
+  LOGIN
+  SUPERUSER
+  CREATEDB
+  CREATEROLE
+  REPLICATION
+  CONNECTION LIMIT -1
+  PASSWORD '1234';
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA shopschema TO "Admin";
+CREATE ROLE "Developer" NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;
+GRANT SELECT (shopCode, shopname, isoutlet, address, city, isclosed, area), UPDATE (shopCode, shopname, isoutlet, address, city, isclosed, area)
+ON TABLE ShopDB.shopschema.shop TO "Developer";
+GRANT SELECT ON TABLE ShopDB.shopschema.check, ShopDB.shopschema.card_check_int, ShopDB.shopschema.check_item_int, ShopDB.shopschema.item, ShopDB.shopschema.itemtype, ShopDB.shopschema.store
+TO "Developer";
+GRANT SELECT (employeecode, firstname, middlename, lastname, position, sex, chief, shopcode) ON TABLE ShopDB.shopschema.employee TO "Developer";
