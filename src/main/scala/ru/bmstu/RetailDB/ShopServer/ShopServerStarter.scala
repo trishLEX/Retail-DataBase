@@ -11,9 +11,9 @@ object ShopServerStarter extends App {
   final val PATH_TO_CREATEDB = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\sql\\CreateDB.sql"
   final val PATH_TO_DBSOURCE = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\sql\\ShopDBSource.sql"
 
-  final val PATH_TO_RETAIL_CACHE = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\RetailCache"
-  final val PATH_TO_CARDS_CACHE  = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\RetailCache\\Cards"
-  final val PATH_TO_SHOP_CACHE   = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\RetailCache\\Shop"
+  final val PATH_TO_RETAIL_CACHE = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\main\\scala\\ru\\bmstu\\RetailDB\\ShopServer\\RetailCache"
+  final val PATH_TO_CARDS_CACHE  = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\main\\scala\\ru\\bmstu\\RetailDB\\ShopServer\\RetailCacheCards"
+  final val PATH_TO_SHOP_CACHE   = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\main\\scala\\ru\\bmstu\\RetailDB\\ShopServer\\RetailCacheShop"
 
   private def deployDB(): Unit = {
     Runtime.getRuntime.exec("psql -U postgres -f " + PATH_TO_CREATEDB)
