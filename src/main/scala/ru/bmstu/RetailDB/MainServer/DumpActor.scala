@@ -49,7 +49,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
   private def dumpWeek(connection: Connection, statement: Statement, shopCode: Int) = {
     val statsOfWeek = getStats(connection, statement, shopCode, "Week").parseJson.convertTo[Stats].countStats()
-    val stats = Map(Calendar.getInstance().get(Calendar.WEEK_OF_YEAR).toString -> statsOfWeek)
+    val stats = Map(shopCode.toString -> Map(Calendar.getInstance().get(Calendar.WEEK_OF_YEAR).toString -> statsOfWeek))
 
     val nowYear = Calendar.getInstance().get(Calendar.YEAR)
     val yearDir = new File(PATH_TO_DUMPED_STATS + "\\" + nowYear)
@@ -67,7 +67,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
         yearDir.listFiles().foreach(file => if (file.getName == "weeks.json") {
           val srcBuffer = Source.fromFile(file)
 
-          val storedStats = srcBuffer.mkString.parseJson.convertTo[Map[String, Stats]]
+          val storedStats = srcBuffer.mkString.parseJson.convertTo[Map[String, Map[String, Stats]]]
           srcBuffer.close()
 
           val mergedStats = stats ++ storedStats
@@ -97,7 +97,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
   private def dumpMonth(connection: Connection, statement: Statement, shopCode: Int) = {
     val statsOfMonth = getStats(connection, statement, shopCode, "Month").parseJson.convertTo[Stats].countStats()
-    val stats = Map((Calendar.getInstance().get(Calendar.MONTH) + 1).toString -> statsOfMonth)
+    val stats = Map(shopCode.toString -> Map((Calendar.getInstance().get(Calendar.MONTH) + 1).toString -> statsOfMonth))
 
     val nowYear = Calendar.getInstance().get(Calendar.YEAR)
     val yearDir = new File(PATH_TO_DUMPED_STATS + "\\" + nowYear)
@@ -115,7 +115,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
         yearDir.listFiles().foreach(file => if (file.getName == "months.json") {
           val srcBuffer = Source.fromFile(file)
 
-          val storedStats = srcBuffer.mkString.parseJson.convertTo[Map[String, Stats]]
+          val storedStats = srcBuffer.mkString.parseJson.convertTo[Map[String, Map[String, Stats]]]
           srcBuffer.close()
 
           val mergedStats = stats ++ storedStats
@@ -145,7 +145,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
   private def dumpYear(connection: Connection, statement: Statement, shopCode: Int) = {
     val statsOfYear = getStats(connection, statement, shopCode, "Year").parseJson.convertTo[Stats].countStats()
-    val stats = Map(Calendar.getInstance().get(Calendar.YEAR).toString -> statsOfYear)
+    val stats = Map(shopCode.toString -> Map(Calendar.getInstance().get(Calendar.YEAR).toString -> statsOfYear))
 
     val nowYear = Calendar.getInstance().get(Calendar.YEAR)
     val yearDir = new File(PATH_TO_DUMPED_STATS + "\\" + nowYear)
@@ -163,7 +163,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
         yearDir.listFiles().foreach(file => if (file.getName == "year.json") {
           val srcBuffer = Source.fromFile(file)
 
-          val storedStats = srcBuffer.mkString.parseJson.convertTo[Map[String, Stats]]
+          val storedStats = srcBuffer.mkString.parseJson.convertTo[Map[String, Map[String, Stats]]]
           srcBuffer.close()
 
           val mergedStats = stats ++ storedStats
@@ -200,7 +200,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     stats
   }
 
-  private def writeMap(yearDir: File, map: Map[String, Stats], name: String) = {
+  private def writeMap(yearDir: File, map: Map[String, Map[String, Stats]], name: String) = {
     println(name+".json")
     val weekStatsFile = new File(yearDir, name + ".json")
     if (!weekStatsFile.exists())
