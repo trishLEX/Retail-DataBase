@@ -4,6 +4,10 @@ import scalaz.Scalaz._
 
 case class ShopStats(shopCode: Int, stats: Stats)
 
+object Stats {
+  def makeEmpty() = Stats(0, 0, -1, 0, -1, 0, 0, -1, 0, 0, Map.empty[String, Int])
+}
+
 case class Stats(
                   countOfVisitors: Int,
                   countOfChecks: Int,
@@ -21,4 +25,13 @@ case class Stats(
     countOfSoldUnits + other.countOfChecks, -1,
     proceedsWithTax + other.proceedsWithTax, proceedsWithoutTax + other.proceedsWithoutTax,
     -1, returnedUnits + other.returnedUnits, salesPerArea + other.salesPerArea, skuPairsFreq |+| other.skuPairsFreq)
+
+  def countStats(): Stats = {
+    val countedCR = this.countOfChecks.toFloat / this.countOfVisitors
+    val countedUPT = this.countOfSoldUnits.toFloat / this.countOfChecks
+    val countedAvgCheck = this.proceedsWithTax / this.countOfChecks
+
+    Stats(countOfVisitors, countOfChecks, countedCR, countOfSoldUnits,
+      countedUPT, proceedsWithTax, proceedsWithoutTax, countedAvgCheck, returnedUnits, salesPerArea, skuPairsFreq)
+  }
 }

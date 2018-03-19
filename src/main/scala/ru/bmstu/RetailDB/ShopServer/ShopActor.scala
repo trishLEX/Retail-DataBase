@@ -49,9 +49,27 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     }
 
     Http(context.system).singleRequest(cardsStatsReq).onComplete {
-      case Success(resp) => if (resp.status != StatusCodes.OK) {println("ERROR IN CARDSSTATS REQUEST: " + resp.status); resendStats(cardsStats, 1)}
+      case Success(resp) => if (resp.status != StatusCodes.OK) {println("ERROR IN CARDSSTATS REQUEST: " + resp.status); resendStats(cardsStats, 1)} else sendCntrlMsg(stats._1.shopCode)
       case Failure(error) => println("CARDSSTATS REQUEST FAILED: " + error.getMessage); resendStats(cardsStats, 1)
     }
+  }
+
+  private def sendCntrlMsg(shopCode: Int) = {
+    val now = Calendar.getInstance()
+//    now.setTime(new SimpleDateFormat("yyyy-MM-dd").parse("2018-04-30"))
+
+    if (now.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY)
+      Http(context.system).singleRequest(
+        HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=WEEK&shopcode=" + shopCode)
+      )
+    else if (now.get(Calendar.DAY_OF_MONTH) == now.getActualMaximum(Calendar.DAY_OF_MONTH))
+      Http(context.system).singleRequest(
+        HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=MONTH&shopcode=" + shopCode)
+      )
+    else if (now.get(Calendar.DAY_OF_YEAR) == now.getActualMaximum(Calendar.DAY_OF_YEAR))
+        Http(context.system).singleRequest(
+          HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=YEAR&shopcode=" + shopCode)
+        )
   }
 
   private def sendCacheFile(file: File) = {
@@ -117,7 +135,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     //TODO val preparedStatement = connection.prepareStatement("SELECT count(checkid) as count FROM shopdb.shopschema.Check WHERE date = ?;")
     //TODO вставить это в production'e preparedStatement.setDate(1, today)
 
-    var preparedStatement = connection.prepareStatement("SELECT count(checkid) as count FROM shopdb.shopschema.Check WHERE date = '2018-01-01';")
+    var preparedStatement = connection.prepareStatement("SELECT count(checkid) as count FROM shopdb.shopschema.Check WHERE date::date = '2018-01-01';")
     var resultSet = preparedStatement.executeQuery()
     resultSet.next()
 
@@ -126,7 +144,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     val countOfVisitors = res.getString("countofvisitorstoday").toInt
     val CR = countOfChecks.toFloat / countOfVisitors
 
-    preparedStatement = connection.prepareStatement("SELECT count(sku) as count FROM shopdb.shopschema.items WHERE date = '2018-01-01';")
+    preparedStatement = connection.prepareStatement("SELECT count(sku) as count FROM shopdb.shopschema.items WHERE date::date = '2018-01-01';")
     //preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     resultSet.next()
@@ -135,14 +153,14 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
     val UPT = countOfSoldUnits.toFloat / countOfChecks
 
-    preparedStatement = connection.prepareStatement("SELECT SUM(costofpositionwithtax)::NUMERIC::FLOAT as sum FROM shopdb.shopschema.items WHERE date = '2018-01-01' AND NOT isreturned")
+    preparedStatement = connection.prepareStatement("SELECT SUM(costofpositionwithtax)::NUMERIC::FLOAT as sum FROM shopdb.shopschema.items WHERE date::date = '2018-01-01' AND NOT isreturned")
     //preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     resultSet.next()
 
     val totalCostWithTax = resultSet.getString("sum").toFloat
 
-    preparedStatement = connection.prepareStatement("SELECT SUM(costofpositionwithouttax)::NUMERIC::FLOAT as sum FROM shopdb.shopschema.items WHERE date = '2018-01-01' AND NOT isreturned")
+    preparedStatement = connection.prepareStatement("SELECT SUM(costofpositionwithouttax)::NUMERIC::FLOAT as sum FROM shopdb.shopschema.items WHERE date::date = '2018-01-01' AND NOT isreturned")
     //preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     resultSet.next()
@@ -151,7 +169,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
     val avgCheck = totalCostWithTax / countOfChecks
 
-    preparedStatement = connection.prepareStatement("SELECT count(sku) as count FROM shopdb.shopschema.items WHERE date = '2018-01-01' AND isreturned")
+    preparedStatement = connection.prepareStatement("SELECT count(sku) as count FROM shopdb.shopschema.items WHERE date::date = '2018-01-01' AND isreturned")
     //preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     resultSet.next()
@@ -162,7 +180,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
     // new items:[{'(1, 2)': 4}, {'(1, 3)': 2}] //
     preparedStatement = connection.prepareStatement("SELECT DISTINCT i1.checkid, i1.sku sku1, i2.sku sku2 " +
-      "FROM shopdb.shopschema.items i1 JOIN shopdb.shopschema.items i2 ON i1.checkid = i2.checkid AND i1.sku > i2.sku WHERE i1.date = '2018-01-01' OR i1.date = '2018-01-02';")
+      "FROM shopdb.shopschema.items i1 JOIN shopdb.shopschema.items i2 ON i1.checkid = i2.checkid AND i1.sku > i2.sku WHERE i1.date::date = '2018-01-01' OR i1.date::date = '2018-01-02';")
     //preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     var skuPairMap = Map.empty[String, Int]
@@ -178,7 +196,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   }
 
   private def getCardsStats(connection: Connection, shopCode: Int, today: Date): List[CardStats] = {
-    var preparedStatement = connection.prepareStatement("SELECT cardid, totalcostwithtax::NUMERIC::FLOAT, array_agg(sku) as purchases FROM shopdb.shopschema.cards_purchases GROUP BY cardid, date, totalcostwithtax HAVING date = '2018-01-01' OR date = '2018-01-06'")
+    var preparedStatement = connection.prepareStatement("SELECT cardid, totalcostwithtax::NUMERIC::FLOAT, array_agg(sku) as purchases FROM shopdb.shopschema.cards_purchases GROUP BY cardid, date, totalcostwithtax HAVING date::date = '2018-01-01' OR date::date = '2018-01-06'")
     //preparedStatement.setDate(1, today)
     var resultSet = preparedStatement.executeQuery()
 

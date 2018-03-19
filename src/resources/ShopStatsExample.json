@@ -9,7 +9,12 @@
     "countOfVisitors": 100,
     "proceedsWithTax": 100.0,
     "countOfSoldUnits": 100,
-    "proceedsWithoutTax": 100.0
+    "proceedsWithoutTax": 100.0,
+    "skuPairsFreq": {
+      "(121,111)": 2,
+      "(131,111)": 1,
+      "(131,121)": 1
+    }
   },
   "statsOfWeek": {
     "CR": 0.0,
@@ -21,7 +26,12 @@
     "countOfVisitors": 100,
     "proceedsWithTax": 100.0,
     "countOfSoldUnits": 100,
-    "proceedsWithoutTax": 100.0
+    "proceedsWithoutTax": 100.0,
+    "skuPairsFreq": {
+      "(121,111)": 2,
+      "(131,111)": 1,
+      "(131,121)": 1
+    }
   },
   "statsOfYear": {
     "CR": 0.0,
@@ -33,7 +43,12 @@
     "countOfVisitors": 100,
     "proceedsWithTax": 100.0,
     "countOfSoldUnits": 100,
-    "proceedsWithoutTax": 100.0
+    "proceedsWithoutTax": 100.0,
+    "skuPairsFreq": {
+      "(121,111)": 2,
+      "(131,111)": 1,
+      "(131,121)": 1
+    }
   },
   "statsOfMonth": {
     "CR": 0.0,
@@ -45,6 +60,11 @@
     "countOfVisitors": 100,
     "proceedsWithTax": 100.0,
     "countOfSoldUnits": 100,
-    "proceedsWithoutTax": 100.0
+    "proceedsWithoutTax": 100.0,
+    "skuPairsFreq": {
+      "(121,111)": 2,
+      "(131,111)": 1,
+      "(131,121)": 1
+    }
   }
 }

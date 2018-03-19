@@ -9,7 +9,7 @@ import scalaz.Scalaz._
 import spray.json._
 
 class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
-  implicit val jsonStats = jsonFormat11(Stats)
+  implicit val jsonStats = jsonFormat11(Stats.apply)
   implicit val jsonShopStats = jsonFormat2(ShopStats)
   implicit val jsonCardsStats = jsonFormat3(Card)
 
