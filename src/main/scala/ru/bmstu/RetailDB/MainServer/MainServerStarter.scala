@@ -16,7 +16,7 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
     implicit val materializer = ActorMaterializer()
     implicit val executionContext = system.dispatcher
 
-    implicit val jsonStats = jsonFormat11(Stats.apply)
+    implicit val jsonStats = jsonFormat12(Stats.apply)
     implicit val jsonShopStats = jsonFormat2(ShopStats)
     implicit val jsonCardsStats = jsonFormat3(Card)
 

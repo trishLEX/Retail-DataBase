@@ -5,7 +5,7 @@ import scalaz.Scalaz._
 case class ShopStats(shopCode: Int, stats: Stats)
 
 object Stats {
-  def makeEmpty() = Stats(0, 0, -1, 0, -1, 0, 0, -1, 0, 0, Map.empty[String, Int])
+  def makeEmpty() = Stats(0, 0, -1, 0, -1, 0, 0, -1, 0, 0, Map.empty[String, Int], Map.empty[String, Int])
 }
 
 case class Stats(
@@ -19,12 +19,13 @@ case class Stats(
                   avgCheck: Float,
                   returnedUnits: Int,
                   salesPerArea: Float,
-                  skuPairsFreq: Map[String, Int]
+                  skuPairsFreq: Map[String, Int],
+                  skuFreq: Map[String, Int]
                 ) {
   def +(other: Stats) = Stats(countOfVisitors + other.countOfVisitors, countOfChecks + other.countOfChecks, -1,
     countOfSoldUnits + other.countOfChecks, -1,
     proceedsWithTax + other.proceedsWithTax, proceedsWithoutTax + other.proceedsWithoutTax,
-    -1, returnedUnits + other.returnedUnits, salesPerArea + other.salesPerArea, skuPairsFreq |+| other.skuPairsFreq)
+    -1, returnedUnits + other.returnedUnits, salesPerArea + other.salesPerArea, skuPairsFreq |+| other.skuPairsFreq, skuFreq |+| other.skuFreq)
 
   def countStats(): Stats = {
     val countedCR = this.countOfChecks.toFloat / this.countOfVisitors
@@ -32,6 +33,6 @@ case class Stats(
     val countedAvgCheck = this.proceedsWithTax / this.countOfChecks
 
     Stats(countOfVisitors, countOfChecks, countedCR, countOfSoldUnits,
-      countedUPT, proceedsWithTax, proceedsWithoutTax, countedAvgCheck, returnedUnits, salesPerArea, skuPairsFreq)
+      countedUPT, proceedsWithTax, proceedsWithoutTax, countedAvgCheck, returnedUnits, salesPerArea, skuPairsFreq, skuFreq)
   }
 }

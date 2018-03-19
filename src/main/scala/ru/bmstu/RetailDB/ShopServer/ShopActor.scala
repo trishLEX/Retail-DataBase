@@ -17,7 +17,7 @@ import scala.util.{Failure, Success}
 import scalaz.Scalaz._
 
 class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
-  implicit val jsonStats = jsonFormat11(Stats)
+  implicit val jsonStats = jsonFormat12(Stats)
   implicit val jsonShopStats = jsonFormat2(ShopStats)
   implicit val jsonCardsStats = jsonFormat3(CardStats)
   implicit val executionContext = context.system.dispatcher
@@ -191,8 +191,17 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
     println("skuPairMap: " + skuPairMap)
 
+    preparedStatement = connection.prepareStatement("SELECT sku, COUNT(sku) AS count FROM shopdb.shopschema.items WHERE date::date = '2018-01-01' OR date = '2018-01-02' GROUP BY sku")
+    //preparedStatement.setDate(1, today)
+    resultSet = preparedStatement.executeQuery()
+    var skuMap = Map.empty[String, Int]
+
+    while (resultSet.next()) {
+      skuMap = skuMap ++ Map(resultSet.getString("sku") -> resultSet.getInt("count"))
+    }
+
     ShopStats(res.getString("shopcode").toInt, Stats(countOfVisitors, countOfChecks.toInt, CR,
-      countOfSoldUnits.toInt, UPT, totalCostWithTax, totalCostWithoutTax, avgCheck, returnedUnits, salesPerArea, skuPairMap))
+      countOfSoldUnits.toInt, UPT, totalCostWithTax, totalCostWithoutTax, avgCheck, returnedUnits, salesPerArea, skuPairMap, skuMap))
   }
 
   private def getCardsStats(connection: Connection, shopCode: Int, today: Date): List[CardStats] = {

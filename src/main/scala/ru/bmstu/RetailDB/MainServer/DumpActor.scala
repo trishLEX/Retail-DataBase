@@ -15,7 +15,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
   private val PATH_TO_DUMPED_STATS = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\main\\scala\\ru\\bmstu\\RetailDB\\MainServer\\DumpedStats"
 
-  implicit val jsonStats = jsonFormat11(Stats.apply)
+  implicit val jsonStats = jsonFormat12(Stats.apply)
 
   override def receive: Receive = {
     case ("WEEK",  shopcode: Int) => dump("WEEK",  shopcode)
