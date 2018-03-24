@@ -112,7 +112,17 @@ class Window(QMainWindow):
         disableButtons(True)
 
 
-        tree.itemClicked.connect(lambda: disableButtons(False) if tree.topLevelItem(0).checkState(0) > 0 else disableButtons(True))
+        def checkDates():
+            res = True
+            res = res and tree.topLevelItem(0).checkState(0) > 0
+            res = res and (
+                    (tree.topLevelItem(1).checkState(0) > 0) ^ (tree.topLevelItem(2).checkState(0) > 0)
+                    or ((tree.topLevelItem(1).checkState(0) == 0) and (tree.topLevelItem(2).checkState(0) == 0)))
+
+            return res
+
+
+        tree.itemClicked.connect(lambda: disableButtons(False) if checkDates() else disableButtons(True))
 
         vbox = QVBoxLayout(tab1)
         vbox.addWidget(tree)
@@ -142,8 +152,7 @@ class Window(QMainWindow):
         back.setFixedWidth(50)
         back.pressed.connect(lambda: self.shopChooseWindow())
 
-        #TODO сделать проверку на валидность списков (не может быть и год, и месяц, и неделя)
-        dates = [year.text(0) for year in years] #это для тестирования. Здесь надо взять валидный список
+        dates = [year.text(0) for year in years]  # это для тестирования
 
         table = QTableWidget()
         table.setColumnCount(10)
