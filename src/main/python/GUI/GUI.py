@@ -1,8 +1,10 @@
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+import openpyxl
 
-class Window(QWidget):
+
+class Window(QMainWindow):
     def __init__(self):
         self.width = 1280
         self.height = 720
@@ -149,7 +151,8 @@ class Window(QWidget):
 
         stats = [[i for i in range(10)], [i*i for i in range(10)]]
 
-        table.setHorizontalHeaderLabels(["CR", "UPT", "avgCheck", "salesPerArea", "countOfChecks", "returnedUnits", "countOfVisitors", "prcWithTax", "prcWithoutTax", "countOfSoldUnits"])
+        labels = ["CR", "UPT", "avgCheck", "salesPerArea", "countOfChecks", "returnedUnits", "countOfVisitors", "prcWithTax", "prcWithoutTax", "countOfSoldUnits"]
+        table.setHorizontalHeaderLabels(labels)
         table.setVerticalHeaderLabels(dates)
 
         for i in range(len(dates)):
@@ -161,16 +164,51 @@ class Window(QWidget):
                 table.setItem(i, j, QTableWidgetItem(str(stats[i][j])))
 
         table.resizeColumnsToContents()
-        
-        #TODO добавить кнопку TO EXCEL
+
+        toExcel = QPushButton("To Excel")
+        toExcel.pressed.connect(lambda: self.toExcel(stats, dates, labels))
 
         vbox = QVBoxLayout(tab1)
         vbox.addWidget(QLabel(shopName))
         vbox.addWidget(table)
+        vbox.addWidget(toExcel)
         vbox.addStretch()
         vbox.addWidget(back)
 
         tabBar.show()
+
+    def toExcel(self, stats, dates, labels):
+        path = QFileDialog().getExistingDirectory(self, 'Choose a directory')
+
+        text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.xlsx to save:')
+
+        while text == "" and ok:
+            error = QMessageBox()
+            error.setIcon(QMessageBox.Critical)
+            error.setText("File's name is not chosen!")
+            error.setStandardButtons(QMessageBox.Ok)
+            error.exec_()
+
+            text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.xlsx to save:')
+
+        if ok:
+            fileStats = openpyxl.Workbook()
+            fileStats.create_sheet('Stats', 0)
+            ws = fileStats['Stats']
+
+            for i in range(len(dates)):
+                ws.cell(row=i + 2, column=1).value = int(dates[i])
+
+            for i in range(len(labels)):
+                ws.cell(row=1, column=i + 2).value = labels[i]
+
+            for i in range(len(stats)):
+                for j in range(len(stats[i])):
+                    ws.cell(row=i + 2, column=j + 2).value = stats[i][j]
+
+            print(path + '/' + text + ".xlsx")
+            fileStats.save(path + '/' + text + ".xlsx")
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
