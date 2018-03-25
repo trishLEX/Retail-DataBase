@@ -1,7 +1,14 @@
-import sys
+import os, sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from matplotlib.pyplot import *
 import openpyxl
+from PIL import Image
+from PIL.ImageQt import ImageQt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+import io
+import numpy as np
 
 
 class Window(QMainWindow):
@@ -65,7 +72,7 @@ class Window(QMainWindow):
         parent = QTreeWidgetItem(tree)
         parent.setText(0, "Years")
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-        years = [2018, 2017]
+        years = [2015, 2016, 2017, 2018]
         for year in years:
             child = QTreeWidgetItem(parent)
             child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
@@ -154,69 +161,185 @@ class Window(QMainWindow):
 
         dates = [year.text(0) for year in years]  # это для тестирования
 
+        print(dates)
+
         table = QTableWidget()
         table.setColumnCount(10)
         table.setRowCount(len(dates))
 
-        stats = [[i for i in range(10)], [i*i for i in range(10)]]
+        stats = [[i for i in range(10)]]
+        if len(dates) == 2:
+            stats.append([i*i for i in range(10)])
+        if len(dates) == 3:
+            stats.append([i*i for i in range(10)])
+            stats.append([i*2 for i in range(10)])
+        if len(dates) == 4:
+            stats.append([i*i for i in range(10)])
+            stats.append([i*2 for i in range(10)])
+            stats.append([i*3 for i in range(10)])
 
-        labels = ["CR", "UPT", "avgCheck", "salesPerArea", "countOfChecks", "returnedUnits", "countOfVisitors", "prcWithTax", "prcWithoutTax", "countOfSoldUnits"]
+        # TODO сделать в порядке как в файле KPI
+        labels = ["Conversion", "Units per transaction",
+                  "Average check", "Sales per area", "Count of checks", "Returned units", "Count of visitors",
+                  "Proceeds without tax", "Proceeds with tax", "Count of sold units"]
         table.setHorizontalHeaderLabels(labels)
         table.setVerticalHeaderLabels(dates)
-
-        for i in range(len(dates)):
-            for j in range(10):
-                print(i, j, stats[i][j])
 
         for i in range(len(dates)):
             for j in range(10):
                 table.setItem(i, j, QTableWidgetItem(str(stats[i][j])))
 
         table.resizeColumnsToContents()
+        table.resizeRowsToContents()
+        table.horizontalHeader().setStretchLastSection(True)
 
         toExcel = QPushButton("To Excel")
         toExcel.pressed.connect(lambda: self.toExcel(stats, dates, labels))
+
+        diagram = QPushButton("View Diagram")
+        diagram.pressed.connect(lambda: self.viewDiagram(stats, dates, labels, shopName, years, months, days))
 
         vbox = QVBoxLayout(tab1)
         vbox.addWidget(QLabel(shopName))
         vbox.addWidget(table)
         vbox.addWidget(toExcel)
+        vbox.addWidget(diagram)
         vbox.addStretch()
         vbox.addWidget(back)
 
         tabBar.show()
 
+    def viewDiagram(self, stats, dates, labels, shopName, years, months, days, label=0):
+        hbox = QHBoxLayout()
+        global currentPlot
+
+        def drawPlot(label):
+            global currentPlot
+
+            width = 1 / (len(dates))
+            index = np.arange(len(dates))
+            xs = []
+            for i in range(len(dates)):
+                xs.append(stats[i][label])
+
+            bar(index, xs, width=width, zorder=2)
+
+            xticks(index, dates, rotation=30, ha="right")
+            ylabel(labels[label])
+            tight_layout()
+            grid(axis='y')
+
+            buf = io.BytesIO()
+
+            savefig(buf, format='png')
+            buf.seek(0)
+
+            im = Image.open(buf)
+
+            imshow(im)
+            buf.close()
+
+            currentPlot = im
+
+            pic1 = QLabel()
+            pic1.setGeometry(0, 0, 640, 480)
+
+
+            pic1.setPixmap(QPixmap.fromImage(ImageQt(im)))
+
+            clf()
+            return pic1
+
+
+        tabBar = QTabWidget(self)
+        tabBar.resize(self.width, self.height)
+        tab1 = QWidget()
+        tab2 = QWidget()
+        tabBar.addTab(tab1, "Shops")
+        tabBar.addTab(tab2, "Cards")
+
+        pic = drawPlot(label)
+
+        chooseLabel = QLabel("Choose an index:")
+        chooseBox = QComboBox()
+        chooseBox.addItems(labels)
+
+        hbox.addWidget(pic)
+        hbox.addStretch()
+        hbox.addWidget(chooseLabel)
+        hbox.addWidget(chooseBox)
+
+        chooseBox.currentIndexChanged.connect(lambda: {hbox.insertWidget(0, drawPlot(chooseBox.currentIndex())), hbox.takeAt(1)})
+
+        back = QPushButton("Back")
+        back.setFixedWidth(50)
+        back.pressed.connect(lambda: {os.remove("E:\Sorry\Documents\PycharmProjects\RetailDB\plot.png"), self.showTableWindow(shopName, years, months, days)})
+
+        toFile = QPushButton("Save to file")
+        toFile.pressed.connect(lambda: self.toFile(currentPlot))
+
+        vbox = QVBoxLayout(tab1)
+        vbox.addLayout(hbox)
+        vbox.addWidget(toFile)
+        vbox.addStretch()
+        vbox.addWidget(back)
+
+        tabBar.show()
+
+    def toFile(self, plot):
+        path = QFileDialog().getExistingDirectory(self, 'Choose a directory')
+
+        if path:
+
+            text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.png to save:')
+
+            while text == "" and ok:
+                error = QMessageBox()
+                error.setIcon(QMessageBox.Critical)
+                error.setText("File's name is not chosen!")
+                error.setStandardButtons(QMessageBox.Ok)
+                error.exec_()
+
+                text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.png to save:')
+
+            if ok:
+                plot.save(path + '/' + text + ".png")
+
+
+
     def toExcel(self, stats, dates, labels):
         path = QFileDialog().getExistingDirectory(self, 'Choose a directory')
 
-        text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.xlsx to save:')
-
-        while text == "" and ok:
-            error = QMessageBox()
-            error.setIcon(QMessageBox.Critical)
-            error.setText("File's name is not chosen!")
-            error.setStandardButtons(QMessageBox.Ok)
-            error.exec_()
+        if path:
 
             text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.xlsx to save:')
 
-        if ok:
-            fileStats = openpyxl.Workbook()
-            fileStats.create_sheet('Stats', 0)
-            ws = fileStats['Stats']
+            while text == "" and ok:
+                error = QMessageBox()
+                error.setIcon(QMessageBox.Critical)
+                error.setText("File's name is not chosen!")
+                error.setStandardButtons(QMessageBox.Ok)
+                error.exec_()
 
-            for i in range(len(dates)):
-                ws.cell(row=i + 2, column=1).value = int(dates[i])
+                text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.xlsx to save:')
 
-            for i in range(len(labels)):
-                ws.cell(row=1, column=i + 2).value = labels[i]
+            if ok:
+                fileStats = openpyxl.Workbook()
+                fileStats.create_sheet('Stats', 0)
+                ws = fileStats['Stats']
 
-            for i in range(len(stats)):
-                for j in range(len(stats[i])):
-                    ws.cell(row=i + 2, column=j + 2).value = stats[i][j]
+                for i in range(len(dates)):
+                    ws.cell(row=i + 2, column=1).value = int(dates[i])
 
-            print(path + '/' + text + ".xlsx")
-            fileStats.save(path + '/' + text + ".xlsx")
+                for i in range(len(labels)):
+                    ws.cell(row=1, column=i + 2).value = labels[i]
+
+                for i in range(len(stats)):
+                    for j in range(len(stats[i])):
+                        ws.cell(row=i + 2, column=j + 2).value = stats[i][j]
+
+                print(path + '/' + text + ".xlsx")
+                fileStats.save(path + '/' + text + ".xlsx")
 
 
 if __name__ == '__main__':
