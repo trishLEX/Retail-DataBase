@@ -273,7 +273,7 @@ class Window(QMainWindow):
 
         back = QPushButton("Back")
         back.setFixedWidth(50)
-        back.pressed.connect(lambda: {os.remove("E:\Sorry\Documents\PycharmProjects\RetailDB\plot.png"), self.showTableWindow(shopName, years, months, days)})
+        back.pressed.connect(lambda: self.showTableWindow(shopName, years, months, days))
 
         toFile = QPushButton("Save to file")
         toFile.pressed.connect(lambda: self.toFile(currentPlot))
