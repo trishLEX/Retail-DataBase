@@ -45,7 +45,8 @@ class Window(QMainWindow):
         commonStats = QPushButton("Show common statistics")
         shopStats = QPushButton("Show shop statistics")
 
-        shopStats.pressed.connect(lambda: self.shopChooseWindow())
+        shopStats.pressed.connect(lambda: self.shopChooseWindow(False))
+        commonStats.pressed.connect(lambda: self.shopChooseWindow(True))
 
         vbox = QVBoxLayout(tab1)
         vbox.addWidget(shopStats)
@@ -54,7 +55,7 @@ class Window(QMainWindow):
 
         tabBar.show()
 
-    def shopChooseWindow(self):
+    def shopChooseWindow(self, isCommon):
         tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
@@ -100,7 +101,10 @@ class Window(QMainWindow):
             child.setCheckState(0, Qt.Unchecked)
 
         shopList = QComboBox()
-        itemList = ["Moscow 1","Moscow 2", "Moscow 3"]
+        if isCommon:
+            itemList = ["The whole company", "Moscow", "St. Petersburg", "Riga"]
+        else:
+            itemList = ["Moscow 1","Moscow 2", "Moscow 3"]
         shopList.addItems(itemList)
 
         showTable = QPushButton("Show Table")
@@ -108,16 +112,10 @@ class Window(QMainWindow):
             itemList[shopList.currentIndex()],
             [item for item in tree.topLevelItem(0).takeChildren() if item.checkState(0) > 0],
             [item for item in tree.topLevelItem(1).takeChildren() if item.checkState(0) > 0],
-            [item for item in tree.topLevelItem(2).takeChildren() if item.checkState(0) > 0]))
+            [item for item in tree.topLevelItem(2).takeChildren() if item.checkState(0) > 0],
+            isCommon))
 
-        showDiag = QPushButton("Show Diagram")
-
-        def disableButtons(bool):
-            showTable.setDisabled(bool)
-            showDiag.setDisabled(bool)
-
-        disableButtons(True)
-
+        showTable.setDisabled(True)
 
         def checkDates():
             res = True
@@ -128,21 +126,19 @@ class Window(QMainWindow):
 
             return res
 
-
-        tree.itemClicked.connect(lambda: disableButtons(False) if checkDates() else disableButtons(True))
+        tree.itemClicked.connect(lambda: showTable.setDisabled(False) if checkDates() else showTable.setDisabled(True))
 
         vbox = QVBoxLayout(tab1)
         vbox.addWidget(tree)
         vbox.addWidget(shopList)
         vbox.addWidget(showTable)
-        vbox.addWidget(showDiag)
         vbox.addStretch(1)
         vbox.addWidget(back)
 
         tabBar.show()
 
 
-    def showTableWindow(self, shopName, years, months, days):
+    def showTableWindow(self, shopName, years, months, days, isCommon):
         print(shopName)
         print([year.text(0) for year in years])
         print([month.text(0) for month in months])
@@ -157,7 +153,7 @@ class Window(QMainWindow):
 
         back = QPushButton("Back")
         back.setFixedWidth(50)
-        back.pressed.connect(lambda: self.shopChooseWindow())
+        back.pressed.connect(lambda: self.shopChooseWindow(isCommon))
 
         dates = [year.text(0) for year in years]  # это для тестирования
 
@@ -184,6 +180,10 @@ class Window(QMainWindow):
                   "Proceeds without tax", "Proceeds with tax", "Count of sold units"]
         table.setHorizontalHeaderLabels(labels)
         table.setVerticalHeaderLabels(dates)
+        header = table.horizontalHeader()
+        header.setFrameStyle(QFrame.Box | QFrame.Plain)
+        header.setLineWidth(1)
+        table.setHorizontalHeader(header)
 
         for i in range(len(dates)):
             for j in range(10):
@@ -193,39 +193,114 @@ class Window(QMainWindow):
         table.resizeRowsToContents()
         table.horizontalHeader().setStretchLastSection(True)
 
+        itemPairsLabels = ["First Item", "Second Item", "Frequency"]
+
+        manFreqPairsList = [["manItem1", "manItem2", 1], ["manItem1", "manItem3", 3],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1]]
+        manFreqPairsTable = QTableWidget()
+        manFreqPairsTable.setRowCount(len(manFreqPairsList)) #TODO брать первые 5 пар или все, но в пределах разумного
+        manFreqPairsTable.setColumnCount(3)
+        manFreqPairsTable.setHorizontalHeaderLabels(itemPairsLabels)
+        for i in range(len(manFreqPairsList)):
+            for j in range(3):
+                manFreqPairsTable.setItem(i, j, QTableWidgetItem(str(manFreqPairsList[i][j])))
+
+        # manFreqPairsTable.resizeColumnsToContents()
+        # manFreqPairsTable.resizeRowsToContents()
+
+        manItemLabels = ["Item", "Count"]
+        manItemList = [["manItem1", 1], ["manItem2", 2], ["manItem3", 3]]
+        manItemTable = QTableWidget()
+        manItemTable.setRowCount(len(manItemList))
+        manItemTable.setColumnCount(2)
+        manItemTable.setHorizontalHeaderLabels(manItemLabels)
+        for i in range(len(manItemList)):
+            for j in range(2):
+                manItemTable.setItem(i, j, QTableWidgetItem(str(manItemList[i][j])))
+
+        womanItemLabels = ["Item", "Count"]
+        womanItemList = [["womanItem1", 1], ["womanItem2", 2], ["womanItem3", 3]]
+        womanItemTable = QTableWidget()
+        womanItemTable.setRowCount(len(womanItemList))
+        womanItemTable.setColumnCount(2)
+        womanItemTable.setHorizontalHeaderLabels(womanItemLabels)
+        for i in range(len(womanItemList)):
+            for j in range(2):
+                womanItemTable.setItem(i, j, QTableWidgetItem(str(womanItemList[i][j])))
+
+        womanFreqPairsList = [["womanItem1", "womanItem2", 2], ["womanItem1", "womanItem3", 4]]
+        womanFreqPairsTable = QTableWidget()
+        womanFreqPairsTable.setRowCount(len(womanFreqPairsList)) #TODO брать первые 5 пар
+        womanFreqPairsTable.setColumnCount(3)
+        womanFreqPairsTable.setHorizontalHeaderLabels(itemPairsLabels)
+        for i in range(len(womanFreqPairsList)):
+            for j in range(3):
+                womanFreqPairsTable.setItem(i, j, QTableWidgetItem(str(womanFreqPairsList[i][j])))
+
+        manPairsButton = QPushButton("View Diagram")
+        manPairs = QVBoxLayout()
+        manPairs.addWidget(manFreqPairsTable)
+        manPairs.addWidget(manPairsButton)
+
+        manItemsButton = QPushButton("View Diagram")
+        manItems = QVBoxLayout()
+        manItems.addWidget(manItemTable)
+        manItems.addWidget(manItemsButton)
+
+        womanPairsButton = QPushButton("View Diagram")
+        womanPairs = QVBoxLayout()
+        womanPairs.addWidget(womanFreqPairsTable)
+        womanPairs.addWidget(womanPairsButton)
+
+        womanItemsButton = QPushButton("View Diagram")
+        womanItems = QVBoxLayout()
+        womanItems.addWidget(womanItemTable)
+        womanItems.addWidget(womanItemsButton)
+
+        itemPairs = QHBoxLayout()
+        itemPairs.addLayout(manPairs)
+        itemPairs.addLayout(manItems)
+        itemPairs.addLayout(womanPairs)
+        itemPairs.addLayout(womanItems)
+
         toExcel = QPushButton("To Excel")
         toExcel.pressed.connect(lambda: self.toExcel(stats, dates, labels))
 
         diagram = QPushButton("View Diagram")
-        diagram.pressed.connect(lambda: self.viewDiagram(stats, dates, labels, shopName, years, months, days))
+        diagram.pressed.connect(lambda: self.viewDiagram(stats, dates, labels, shopName, years, months, days, isCommon))
+
+        manWomanLabel = QHBoxLayout()
+        manWomanLabel.addWidget(QLabel("Man"))
+        manWomanLabel.addWidget(QLabel("Woman"))
 
         vbox = QVBoxLayout(tab1)
         vbox.addWidget(QLabel(shopName))
         vbox.addWidget(table)
-        vbox.addWidget(toExcel)
         vbox.addWidget(diagram)
+        vbox.addLayout(manWomanLabel)
+        vbox.addLayout(itemPairs)
+        vbox.addWidget(toExcel)
         vbox.addStretch()
         vbox.addWidget(back)
 
         tabBar.show()
 
-    def viewDiagram(self, stats, dates, labels, shopName, years, months, days, label=0):
+    def viewDiagram(self, stats, dates, labels, shopName, years, months, days, isCommon, numberOfKPI=0):
         hbox = QHBoxLayout()
         global currentPlot
 
-        def drawPlot(label):
+        def drawPlot(numberOfKPI):
             global currentPlot
 
             width = 1 / (len(dates))
             index = np.arange(len(dates))
             xs = []
             for i in range(len(dates)):
-                xs.append(stats[i][label])
+                xs.append(stats[i][numberOfKPI])
 
             bar(index, xs, width=width, zorder=2)
 
             xticks(index, dates, rotation=30, ha="right")
-            ylabel(labels[label])
+            ylabel(labels[numberOfKPI])
             tight_layout()
             grid(axis='y')
 
@@ -250,7 +325,6 @@ class Window(QMainWindow):
             clf()
             return pic1
 
-
         tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
@@ -258,7 +332,7 @@ class Window(QMainWindow):
         tabBar.addTab(tab1, "Shops")
         tabBar.addTab(tab2, "Cards")
 
-        pic = drawPlot(label)
+        pic = drawPlot(numberOfKPI)
 
         chooseLabel = QLabel("Choose an index:")
         chooseBox = QComboBox()
@@ -273,7 +347,7 @@ class Window(QMainWindow):
 
         back = QPushButton("Back")
         back.setFixedWidth(50)
-        back.pressed.connect(lambda: {os.remove("E:\Sorry\Documents\PycharmProjects\RetailDB\plot.png"), self.showTableWindow(shopName, years, months, days)})
+        back.pressed.connect(lambda: self.showTableWindow(shopName, years, months, days, isCommon))
 
         toFile = QPushButton("Save to file")
         toFile.pressed.connect(lambda: self.toFile(currentPlot))
@@ -304,8 +378,6 @@ class Window(QMainWindow):
 
             if ok:
                 plot.save(path + '/' + text + ".png")
-
-
 
     def toExcel(self, stats, dates, labels):
         path = QFileDialog().getExistingDirectory(self, 'Choose a directory')
