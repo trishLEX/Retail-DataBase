@@ -1,0 +1,24 @@
+{
+  "14": {
+    "proceedsWithoutTax": 3100.0,
+    "skuFreq": {
+      "111": 6,
+      "121": 4,
+      "131": 2
+    },
+    "countOfChecks": 2,
+    "UPT": 2.0,
+    "countOfVisitors": 105,
+    "avgCheck": 1850.0,
+    "returnedUnits": 0,
+    "skuPairsFreq": {
+      "(121,111)": 4,
+      "(131,111)": 2,
+      "(131,121)": 2
+    },
+    "salesPerArea": 36.0,
+    "countOfSoldUnits": 4,
+    "proceedsWithTax": 3700.0,
+    "CR": 0.01904761977493763
+  }
+}
