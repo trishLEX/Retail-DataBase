@@ -2,14 +2,11 @@ package ru.bmstu.RetailDB.MainServer
 
 import java.io.File
 import java.sql._
-import java.util.Calendar
 
 import akka.actor.Actor
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
 import spray.json._
-
-import scala.io.Source
 
 class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   private val connectionString = "jdbc:postgresql://localhost:5432/maindb?user=postgres&password=0212"
@@ -28,9 +25,9 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   implicit val jsonStats = jsonFormat12(Stats.apply)
 
   override def receive: Receive = {
-    case ("WEEK",  shopcode: Int) => dump("WEEK",  shopcode)
-    case ("MONTH", shopcode: Int) => dump("MONTH", shopcode)
-    case ("YEAR",  shopcode: Int) => dump("YEAR",  shopcode)
+    case ("WEEK",  year: Int, week: Int,  shopcode: Int) => dump("WEEK",  year, week,  shopcode)
+    case ("MONTH", year: Int, month: Int, shopcode: Int) => dump("MONTH", year, month, shopcode)
+    case ("YEAR",  year: Int,             shopcode: Int) => dump("YEAR",  year, year,  shopcode)
     case ("MONTH CARD")           => cleanMonthCard()
     case ("YEAR CARD")            => cleanYearCard()
   }
@@ -63,7 +60,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     }
   }
 
-  private def dump(date: String, shopCode: Int) = {
+  private def dump(date: String, year: Int, dateNumber: Int, shopCode: Int) = {
     classOf[org.postgresql.Driver]
 
     val connection = DriverManager.getConnection(connectionString)
@@ -74,11 +71,11 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       println("DATE: " + date)
 
       if (date == "WEEK")
-        dumpWeek(connection, stmt, shopCode)
+        dumpWeek (connection, stmt, shopCode, year, dateNumber)
       else if (date == "MONTH")
-        dumpMonth(connection, stmt, shopCode)
+        dumpMonth(connection, stmt, shopCode, year, dateNumber)
       else if (date == "YEAR")
-        dumpYear(connection, stmt, shopCode)
+        dumpYear (connection, stmt, shopCode, dateNumber)
 
     } catch {
       case e: Exception => e.printStackTrace(); null
@@ -87,37 +84,15 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     }
   }
 
-  private def dumpWeek(connection: Connection, statement: Statement, shopCode: Int) = {
+  private def dumpWeek(connection: Connection, statement: Statement, shopCode: Int, year: Int, dateNumber: Int) = {
     val statsOfWeek = getStats(connection, statement, shopCode, "Week").parseJson.convertTo[Stats].countStats()
-    val stats = Map(Calendar.getInstance().get(Calendar.WEEK_OF_YEAR).toString -> statsOfWeek)
 
-    val nowYear = Calendar.getInstance().get(Calendar.YEAR)
-    val yearDir = new File(PATH_TO_DUMPED_STATS + "\\" + shopCode + "\\" + nowYear)
-
-    if (!yearDir.exists()) {
-
-      yearDir.mkdirs()
-
-      //println(stats.toJson.prettyPrint)
-
-      writeMap(yearDir, stats, "weeks")
-    } else {
-      if (!yearDir.list().contains("weeks.json")) {
-        writeMap(yearDir, stats, "weeks")
-      } else
-        yearDir.listFiles().foreach(file => if (file.getName == "weeks.json") {
-          val srcBuffer = Source.fromFile(file)
-
-          val storedStats = srcBuffer.mkString.parseJson.convertTo[Map[String, Stats]]
-          srcBuffer.close()
-
-          val mergedStats = stats ++ storedStats
-
-          //println(mergedStats.toJson.prettyPrint)
-
-          writeMap(yearDir, mergedStats, "weeks")
-        })
-    }
+    val insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Weeks (year, week, shopcode, stats) VALUES (?, ?, ?, (SELECT stats->'statsOfYear' FROM MainDB.shopschema.Shops WHERE shopCode = ?));")
+    insertStmt.setInt(1, year)
+    insertStmt.setInt(2, dateNumber)
+    insertStmt.setInt(3, shopCode)
+    insertStmt.setInt(4, shopCode)
+    insertStmt.execute()
 
     val emptyStats = Stats.makeEmpty()
     val dayStats = getStats(connection, statement, shopCode, "Day")
@@ -136,38 +111,15 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     //preparedStatement.execute()
   }
 
-  private def dumpMonth(connection: Connection, statement: Statement, shopCode: Int) = {
+  private def dumpMonth(connection: Connection, statement: Statement, shopCode: Int, year: Int, dateNumber: Int) = {
     val statsOfMonth = getStats(connection, statement, shopCode, "Month").parseJson.convertTo[Stats].countStats()
-    //val stats = Map(shopCode.toString -> Map((Calendar.getInstance().get(Calendar.MONTH) + 1).toString -> statsOfMonth))
-    val stats = Map((Calendar.getInstance().get(Calendar.MONTH) + 1).toString -> statsOfMonth)
 
-    val nowYear = Calendar.getInstance().get(Calendar.YEAR)
-    val yearDir = new File(PATH_TO_DUMPED_STATS + "\\" + shopCode + "\\" + nowYear)
-
-    if (!yearDir.exists()) {
-
-      yearDir.mkdirs()
-
-      //println(stats.toJson.prettyPrint)
-
-      writeMap(yearDir, stats, "months")
-    } else {
-      if (!yearDir.list().contains("months.json")) {
-        writeMap(yearDir, stats, "months")
-      } else
-        yearDir.listFiles().foreach(file => if (file.getName == "months.json") {
-          val srcBuffer = Source.fromFile(file)
-
-          val storedStats = srcBuffer.mkString.parseJson.convertTo[Map[String, Stats]]
-          srcBuffer.close()
-
-          val mergedStats = stats ++ storedStats
-
-          //println(mergedStats.toJson.prettyPrint)
-
-          writeMap(yearDir, mergedStats, "months")
-        })
-    }
+    val insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Months (year, month, shopcode, stats) VALUES (?, ?, ?, (SELECT stats->'statsOfYear' FROM MainDB.shopschema.Shops WHERE shopCode = ?));")
+    insertStmt.setInt(1, year)
+    insertStmt.setInt(2, dateNumber)
+    insertStmt.setInt(3, shopCode)
+    insertStmt.setInt(4, shopCode)
+    insertStmt.execute()
 
     val emptyStats = Stats.makeEmpty()
     val dayStats = getStats(connection, statement, shopCode, "Day")
@@ -186,38 +138,14 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     //preparedStatement.execute()
   }
 
-  private def dumpYear(connection: Connection, statement: Statement, shopCode: Int) = {
+  private def dumpYear(connection: Connection, statement: Statement, shopCode: Int, dateNumber: Int) = {
     val statsOfYear = getStats(connection, statement, shopCode, "Year").parseJson.convertTo[Stats].countStats()
-    //val stats = Map(shopCode.toString -> Map(Calendar.getInstance().get(Calendar.YEAR).toString -> statsOfYear))
-    val stats = Map(Calendar.getInstance().get(Calendar.YEAR).toString -> statsOfYear)
 
-    val nowYear = Calendar.getInstance().get(Calendar.YEAR)
-    val yearDir = new File(PATH_TO_DUMPED_STATS + "\\" + shopCode + "\\" + nowYear)
-
-    if (!yearDir.exists()) {
-
-      yearDir.mkdirs()
-
-      //println(stats.toJson.prettyPrint)
-
-      writeMap(yearDir, stats, "year")
-    } else {
-      if (!yearDir.list().contains("months.json")) {
-        writeMap(yearDir, stats, "months")
-      } else
-        yearDir.listFiles().foreach(file => if (file.getName == "year.json") {
-          val srcBuffer = Source.fromFile(file)
-
-          val storedStats = srcBuffer.mkString.parseJson.convertTo[Map[String, Stats]]
-          srcBuffer.close()
-
-          val mergedStats = stats ++ storedStats
-
-          //println(mergedStats.toJson.prettyPrint)
-
-          writeMap(yearDir, mergedStats, "year")
-        })
-    }
+    val insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Years (year, shopcode, stats) VALUES (?, ?, (SELECT stats->'statsOfYear' FROM MainDB.shopschema.Shops WHERE shopCode = ?));")
+    insertStmt.setInt(1, dateNumber)
+    insertStmt.setInt(2, shopCode)
+    insertStmt.setInt(3, shopCode)
+    insertStmt.execute()
 
     val emptyStats = Stats.makeEmpty()
     val dayStats = getStats(connection, statement, shopCode, "Day")

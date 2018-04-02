@@ -52,6 +52,6 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
     Http().bindAndHandle(route, "localhost", 8888)
 
     //serverActor ! ShopStats(100, 100, 1, 0, 100, 100, 100, 100, 0, 0, 0)
-    //dumpActor ! ("MONTH", 100)
+    //dumpActor ! ("WEEK", 2018, 1, 100)
   }
 }
