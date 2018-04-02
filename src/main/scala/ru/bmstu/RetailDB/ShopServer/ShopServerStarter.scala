@@ -26,15 +26,15 @@ object ShopServerStarter extends App {
 
     val retailCache = new File(PATH_TO_RETAIL_CACHE)
     if (!retailCache.exists())
-      retailCache.mkdir()
+      retailCache.mkdirs()
 
     val cards = new File(PATH_TO_CARDS_CACHE)
     if (!cards.exists())
-      cards.mkdir()
+      cards.mkdirs()
 
     val shop = new File(PATH_TO_CARDS_CACHE)
     if (!shop.exists())
-      shop.mkdir()
+      shop.mkdirs()
   }
 
   override def main(args: Array[String]): Unit = {

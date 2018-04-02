@@ -11,7 +11,9 @@ import spray.json._
 class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
   implicit val jsonStats = jsonFormat12(Stats.apply)
   implicit val jsonShopStats = jsonFormat2(ShopStats)
-  implicit val jsonCardsStats = jsonFormat3(Card)
+  implicit val jsonCard = jsonFormat3(Card)
+  implicit val jsonCardStatsMap = jsonFormat2(CardStatsMap)
+  implicit val jsonCardStats = jsonFormat2(CardStats)
 
   private val connectionString = "jdbc:postgresql://localhost:5432/maindb?user=postgres&password=0212"
 
@@ -38,6 +40,7 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
   }
 
   private def insertShopStats(connection: Connection, statement: Statement, stats: ShopStats): Unit = {
+    //TODO сделать обработку случая, если приходит null или еще нет statsOf_
     var preparedStatement = connection.prepareStatement("SELECT stats->'statsOfWeek' AS S FROM MainDB.shopschema.shops WHERE shopCode = ?")
     preparedStatement.setInt(1, stats.shopCode)
     var resSet = preparedStatement.executeQuery()
@@ -96,28 +99,37 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
     cardsArray.setType("INT[]")
     cardsArray.setValue(cardIDs.mkString(","))
 
-    val resultSet = statement.executeQuery(s"SELECT cardID, stats->'bought' s, totalSum::NUMERIC::FLOAT FROM MainDB.shopschema.Card WHERE cardID IN ($cardsArray)")
+    val resultSet = statement.executeQuery(s"SELECT cardID, stats->'statsTotal' s FROM MainDB.shopschema.Card WHERE cardID IN ($cardsArray)")
 
     while (resultSet.next()) {
       val storedCardID = resultSet.getInt("cardID")
       val storedStatMapJson = resultSet.getString("s")
-      val storedSum = resultSet.getFloat("totalSum")
 
-      val insertedStats = statsList.find((p: Card) => p.cardID == storedCardID).get
+      val insertedStats = statsList.find((p: Card) => p.cardID == storedCardID).get.getStats
 
-      val prpStmnt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{bought}', ?::jsonb), totalsum = ?::NUMERIC::MONEY WHERE cardID = ?")
+      val prpStmnt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsTotal}', ?::jsonb) WHERE cardID = ?")
 
       if (storedStatMapJson == null || storedStatMapJson == "{}" || storedStatMapJson == "null" ) {
         println("TO INSERT STATS: " + insertedStats)
+        println(insertedStats.toJson.toString())
 
         prpStmnt.setString(1, insertedStats.statMap.toJson.toString())
-        prpStmnt.setFloat(2, insertedStats.totalCost)
-        prpStmnt.setInt(3, insertedStats.cardID)
+        prpStmnt.setInt(2, insertedStats.cardID)
+
+        var stmt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfMonth}', ?::jsonb) WHERE cardID = ?")
+        stmt.setString(1, insertedStats.statMap.toJson.toString())
+        stmt.setInt(2, insertedStats.cardID)
+        stmt.execute()
+
+        stmt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfYear}', ?::jsonb) WHERE cardID = ?")
+        stmt.setString(1, insertedStats.statMap.toJson.toString())
+        stmt.setInt(2, insertedStats.cardID)
+        stmt.execute()
 
         println("INSERTED STATS: " + insertedStats)
 
       } else {
-        val storedCardStats = ("{\"cardID\":" + storedCardID + ", \"totalCost\":" + storedSum + ", \"statMap\":" + storedStatMapJson + "}").parseJson.convertTo[Card]
+        val storedCardStats = ("{\"cardID\":" + storedCardID + ", \"statMap\":" + storedStatMapJson + "}").parseJson.convertTo[CardStats]
 
         println("STORED STATS: " + storedCardStats)
         println("TO INSERT STATS: " + insertedStats)
@@ -125,10 +137,31 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
         val mergedStats = storedCardStats + insertedStats
 
         prpStmnt.setString(1, mergedStats.statMap.toJson.toString())
-        prpStmnt.setFloat(2, mergedStats.totalCost)
-        prpStmnt.setInt(3, mergedStats.cardID)
+        prpStmnt.setInt(2, mergedStats.cardID)
 
         println("INSERTED STATS: " + mergedStats)
+
+        var stmt = connection.prepareStatement("SELECT stats->'statsOfMonth' s FROM MainDB.shopschema.Card WHERE cardID = ?")
+        stmt.setInt(1, storedCardID)
+        var res = stmt.executeQuery()
+        res.next()
+        val newStatsOfMonth = res.getString("s").parseJson.convertTo[CardStatsMap] + insertedStats.statMap
+
+        stmt = connection.prepareStatement("SELECT stats->'statsOfYear' s FROM MainDB.shopschema.Card WHERE cardID = ?")
+        stmt.setInt(1, storedCardID)
+        res = stmt.executeQuery()
+        res.next()
+        val newStatsOfYear = res.getString("s").parseJson.convertTo[CardStatsMap] + insertedStats.statMap
+
+        stmt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfMonth}', ?::jsonb) WHERE cardID = ?")
+        stmt.setString(1, newStatsOfMonth.toJson.toString())
+        stmt.setInt(2, storedCardID)
+        stmt.execute()
+
+        stmt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfYear}', ?::jsonb) WHERE cardID = ?")
+        stmt.setString(1, newStatsOfYear.toJson.toString())
+        stmt.setInt(2, storedCardID)
+        stmt.execute()
       }
 
       prpStmnt.execute()
@@ -138,19 +171,19 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
   }
 
   private def analyzeStats(connection: Connection, statement: Statement, cardsArray: PGobject): Unit = {
-    val resultSet = statement.executeQuery(s"SELECT cardID, stats->'bought' s FROM MainDB.shopschema.Card WHERE cardID IN ($cardsArray)")
+    val resultSet = statement.executeQuery(s"SELECT cardID, stats->'statsTotal' s FROM MainDB.shopschema.Card WHERE cardID IN ($cardsArray)")
 
     while (resultSet.next()) {
       val cardID = resultSet.getInt("cardID")
       val statMapJson = resultSet.getString("s")
 
-      val card = CardStats(cardID, statMapJson.parseJson.convertTo[Map[String, Map[String, Int]]])
-      println("STORED STATS: " + card.stats)
+      val card = CardStats(cardID, statMapJson.parseJson.convertTo[CardStatsMap])
+      println("STORED STATS: " + card.statMap.bought)
 
-      val mostPurchasedItems = sumList(card.stats.values.flatten.toList)
+      val mostPurchasedItems = sumList(card.statMap.bought.values.flatten.toList)
       println("MOST PURCHASED ITEMS: " + mostPurchasedItems.toJson.toString())
 
-      val favoriteShops = card.stats.map{case (key, value) => (key, value.values.sum)}
+      val favoriteShops = card.statMap.bought.map{case (key, value) => (key, value.values.sum)}
       println("SHOPS: " + favoriteShops.toJson.toString())
 
       var prpStmnt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{mostPurchasedItems}', ?::jsonb) WHERE cardID = ?;")

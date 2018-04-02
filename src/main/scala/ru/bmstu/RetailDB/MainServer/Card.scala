@@ -9,6 +9,22 @@ case class Card(cardID: Int, totalCost: Float, statMap: Map[String, Map[String, 
     else
       Card(this.cardID, this.totalCost + other.totalCost, this.statMap |+| other.statMap)
   }
+
+  def getStats = CardStats(cardID, CardStatsMap(statMap, totalCost))
 }
 
-case class CardStats(cardID: Int, stats: Map[String, Map[String, Int]])
+//case class CardStats(cardID: Int, stats: Map[String, Map[String, Int]])
+case class CardStats(cardID: Int, statMap: CardStatsMap) {
+  def +(other: CardStats): CardStats = {
+    if (this.cardID != other.cardID)
+      throw new Exception("cardID's are not equal")
+    else
+      CardStats(this.cardID, this.statMap + other.statMap)
+  }
+}
+
+case class CardStatsMap(bought: Map[String, Map[String, Int]], totalSum: Float) {
+  def +(other: CardStatsMap): CardStatsMap = {
+    CardStatsMap(this.bought |+| other.bought, this.totalSum + other.totalSum)
+  }
+}
