@@ -6,6 +6,7 @@ import java.util.Calendar
 
 import akka.actor.Actor
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
 import spray.json._
 
 import scala.io.Source
@@ -15,12 +16,51 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
   private val PATH_TO_DUMPED_STATS = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\main\\scala\\ru\\bmstu\\RetailDB\\MainServer\\DumpedStats"
 
+  private val monthScheduler = QuartzSchedulerExtension(context.system)
+  monthScheduler.createSchedule("monthScheduler", cronExpression = "0 0 0 ? * MON *")
+  //monthScheduler.createSchedule("monthScheduler", cronExpression = "50 34 12 ? * *")
+  monthScheduler.schedule("monthScheduler", self, "MONTH CARD")
+
+  private val yearScheduler = QuartzSchedulerExtension(context.system)
+  yearScheduler.createSchedule("yearScheduler", cronExpression = "0 0 0 1 JAN ? *")
+  yearScheduler.schedule("yearScheduler", self, "YEAR CARD")
+
   implicit val jsonStats = jsonFormat12(Stats.apply)
 
   override def receive: Receive = {
     case ("WEEK",  shopcode: Int) => dump("WEEK",  shopcode)
     case ("MONTH", shopcode: Int) => dump("MONTH", shopcode)
     case ("YEAR",  shopcode: Int) => dump("YEAR",  shopcode)
+    case ("MONTH CARD")           => cleanMonthCard()
+    case ("YEAR CARD")            => cleanYearCard()
+  }
+
+  private def cleanMonthCard() = {
+    val connection = DriverManager.getConnection(connectionString)
+
+    try {
+      val cardPreparedStatment = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfMonth}', '{\"bought\":{}, \"totalSum\":0}')")
+      cardPreparedStatment.execute()
+
+    } catch {
+      case e: Exception => e.printStackTrace(); null
+    } finally {
+      connection.close()
+    }
+  }
+
+  private def cleanYearCard() = {
+    val connection = DriverManager.getConnection(connectionString)
+
+    try {
+      val cardPreparedStatment = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfYear}', '{\"bought\":{}, \"totalSum\":0}')")
+      cardPreparedStatment.execute()
+
+    } catch {
+      case e: Exception => e.printStackTrace(); null
+    } finally {
+      connection.close()
+    }
   }
 
   private def dump(date: String, shopCode: Int) = {
