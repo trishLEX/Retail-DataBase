@@ -40,39 +40,60 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
   }
 
   private def insertShopStats(connection: Connection, statement: Statement, stats: ShopStats): Unit = {
-    //TODO сделать обработку случая, если приходит null или еще нет statsOf_
-    var preparedStatement = connection.prepareStatement("SELECT stats->'statsOfWeek' AS S FROM MainDB.shopschema.shops WHERE shopCode = ?")
+    var preparedStatement = connection.prepareStatement("SELECT stats FROM MainDB.shopschema.shops WHERE shopCode = ?")
     preparedStatement.setInt(1, stats.shopCode)
     var resSet = preparedStatement.executeQuery()
     resSet.next()
-    val newStatsOfWeek = stats.stats + resSet.getString("s").parseJson.convertTo[Stats]
-    println(newStatsOfWeek)
 
-    preparedStatement = connection.prepareStatement("SELECT stats->'statsOfMonth' AS S FROM MainDB.shopschema.shops WHERE shopCode = ?")
-    preparedStatement.setInt(1, stats.shopCode)
-    resSet = preparedStatement.executeQuery()
-    resSet.next()
-    val newStatsOfMonth = stats.stats + resSet.getString("s").parseJson.convertTo[Stats]
-    println(newStatsOfMonth)
+    if (resSet.getString("stats") == null || resSet.getString("stats") == "{}") {
 
-    preparedStatement = connection.prepareStatement("SELECT stats->'statsOfYear' AS S FROM MainDB.shopschema.shops WHERE shopCode = ?")
-    preparedStatement.setInt(1, stats.shopCode)
-    resSet = preparedStatement.executeQuery()
-    resSet.next()
-    val newStatsOfYear = stats.stats + resSet.getString("s").parseJson.convertTo[Stats]
-    println(newStatsOfYear)
+      val json = "{\"statsOfDay\":" + stats.stats.toJson.toString + ", \"statsOfWeek\":" + stats.stats.toJson.toString +
+        ", \"statsOfMonth\": " +  stats.stats.toJson.toString + ", \"statsOfYear\": " +  stats.stats.toJson.toString +
+        "}"
+      println(json.parseJson.prettyPrint)
 
-    val json = "{\"statsOfDay\":" + stats.stats.toJson.toString + ", \"statsOfWeek\":" + newStatsOfWeek.toJson.toString +
-      ", \"statsOfMonth\": " + newStatsOfMonth.toJson.toString + ", \"statsOfYear\": " + newStatsOfYear.toJson.toString +
-      "}"
-    println(json.parseJson.prettyPrint)
+      preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Shops SET stats = ?::jsonb WHERE shopCode = ?")
+      preparedStatement.setString(1, json.parseJson.toString)
+      preparedStatement.setInt(2, stats.shopCode)
+      preparedStatement.execute()
 
-    preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Shops SET stats = ?::jsonb WHERE shopCode = ?")
-    preparedStatement.setString(1, json.parseJson.toString)
-    preparedStatement.setInt(2, stats.shopCode)
-    preparedStatement.execute()
+      println("INSERTED SHOP STATS: " + json.parseJson.toString)
 
-    println("INSERTED SHOP STATS: " + json.parseJson.toString)
+    } else {
+
+      preparedStatement = connection.prepareStatement("SELECT stats->'statsOfWeek' AS S FROM MainDB.shopschema.shops WHERE shopCode = ?")
+      preparedStatement.setInt(1, stats.shopCode)
+      resSet = preparedStatement.executeQuery()
+      resSet.next()
+      val newStatsOfWeek = stats.stats + resSet.getString("s").parseJson.convertTo[Stats]
+      println(newStatsOfWeek)
+
+      preparedStatement = connection.prepareStatement("SELECT stats->'statsOfMonth' AS S FROM MainDB.shopschema.shops WHERE shopCode = ?")
+      preparedStatement.setInt(1, stats.shopCode)
+      resSet = preparedStatement.executeQuery()
+      resSet.next()
+      val newStatsOfMonth = stats.stats + resSet.getString("s").parseJson.convertTo[Stats]
+      println(newStatsOfMonth)
+
+      preparedStatement = connection.prepareStatement("SELECT stats->'statsOfYear' AS S FROM MainDB.shopschema.shops WHERE shopCode = ?")
+      preparedStatement.setInt(1, stats.shopCode)
+      resSet = preparedStatement.executeQuery()
+      resSet.next()
+      val newStatsOfYear = stats.stats + resSet.getString("s").parseJson.convertTo[Stats]
+      println(newStatsOfYear)
+
+      val json = "{\"statsOfDay\":" + stats.stats.toJson.toString + ", \"statsOfWeek\":" + newStatsOfWeek.toJson.toString +
+        ", \"statsOfMonth\": " + newStatsOfMonth.toJson.toString + ", \"statsOfYear\": " + newStatsOfYear.toJson.toString +
+        "}"
+      println(json.parseJson.prettyPrint)
+
+      preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Shops SET stats = ?::jsonb WHERE shopCode = ?")
+      preparedStatement.setString(1, json.parseJson.toString)
+      preparedStatement.setInt(2, stats.shopCode)
+      preparedStatement.execute()
+
+      println("INSERTED SHOP STATS: " + json.parseJson.toString)
+    }
   }
 
   private def insertCardsStats(statsList: List[Card]): Unit = {
