@@ -2,6 +2,7 @@ package ru.bmstu.RetailDB.MainServer
 
 import java.io.File
 import java.sql._
+import java.util.Calendar
 
 import akka.actor.Actor
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
@@ -25,9 +26,9 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   implicit val jsonStats = jsonFormat12(Stats.apply)
 
   override def receive: Receive = {
-    case ("WEEK",  year: Int, week: Int,  shopcode: Int) => dump("WEEK",  year, week,  shopcode)
-    case ("MONTH", year: Int, month: Int, shopcode: Int) => dump("MONTH", year, month, shopcode)
-    case ("YEAR",  year: Int,             shopcode: Int) => dump("YEAR",  year, year,  shopcode)
+    case ("WEEK",  shopcode: Int) => dump("WEEK",  shopcode)
+    case ("MONTH", shopcode: Int) => dump("MONTH", shopcode)
+    case ("YEAR",  shopcode: Int) => dump("YEAR",  shopcode)
     case ("MONTH CARD")           => cleanMonthCard()
     case ("YEAR CARD")            => cleanYearCard()
   }
@@ -60,10 +61,12 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     }
   }
 
-  private def dump(date: String, year: Int, dateNumber: Int, shopCode: Int) = {
+  private def dump(date: String, shopCode: Int) = {
     classOf[org.postgresql.Driver]
 
     val connection = DriverManager.getConnection(connectionString)
+
+    val year = Calendar.getInstance().get(Calendar.YEAR)
 
     try {
       val stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
@@ -71,11 +74,11 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       println("DATE: " + date)
 
       if (date == "WEEK")
-        dumpWeek (connection, stmt, shopCode, year, dateNumber)
+        dumpWeek (connection, stmt, shopCode, year, Calendar.getInstance().get(Calendar.WEEK_OF_YEAR))
       else if (date == "MONTH")
-        dumpMonth(connection, stmt, shopCode, year, dateNumber)
+        dumpMonth(connection, stmt, shopCode, year, Calendar.getInstance().get(Calendar.MONTH))
       else if (date == "YEAR")
-        dumpYear (connection, stmt, shopCode, dateNumber)
+        dumpYear (connection, stmt, shopCode, year)
 
     } catch {
       case e: Exception => e.printStackTrace(); null
