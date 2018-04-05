@@ -2,8 +2,8 @@ package ru.bmstu.RetailDB.ShopServer
 
 import java.io.File
 import java.sql._
-import java.util.Calendar
 import java.util.concurrent.locks.{Lock, ReentrantLock}
+import java.util.{Calendar, Date}
 
 import akka.actor.Actor
 import akka.http.scaladsl.Http
@@ -58,18 +58,78 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     val now = Calendar.getInstance()
 //    now.setTime(new SimpleDateFormat("yyyy-MM-dd").parse("2018-04-30"))
 
-    if (now.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY)
+    if (now.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+      val today = Calendar.getInstance()
+      today.add(Calendar.WEEK_OF_YEAR, -1)
+      val from = today.get(Calendar.YEAR) + "-" + today.get(Calendar.MONTH) + "-" + today.get(Calendar.DAY_OF_MONTH)
+      val to = now.get(Calendar.YEAR) + "-" + now.get(Calendar.MONTH) + "-" + now.get(Calendar.DAY_OF_MONTH)
+
+      val cards = getCards(from, to).toJson
+
       Http(context.system).singleRequest(
-        HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=WEEK&shopcode=" + shopCode)
+        HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=WEEK&shopcode=" + shopCode, entity = HttpEntity(ContentTypes.`application/json`, cards.prettyPrint))
       )
-    else if (now.get(Calendar.DAY_OF_MONTH) == now.getActualMaximum(Calendar.DAY_OF_MONTH))
+    }
+    else if (now.get(Calendar.DAY_OF_MONTH) == now.getActualMaximum(Calendar.DAY_OF_MONTH)) {
+      val today = Calendar.getInstance()
+      today.add(Calendar.MONTH, -1)
+      val from = today.get(Calendar.YEAR) + "-" + today.get(Calendar.MONTH) + "-" + today.get(Calendar.DAY_OF_MONTH)
+      val to = now.get(Calendar.YEAR) + "-" + now.get(Calendar.MONTH) + "-" + now.get(Calendar.DAY_OF_MONTH)
+
+      val cards = getCards(from, to).toJson
+
       Http(context.system).singleRequest(
-        HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=MONTH&shopcode=" + shopCode)
+        HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=MONTH&shopcode=" + shopCode, entity = HttpEntity(ContentTypes.`application/json`, cards.prettyPrint))
       )
-    else if (now.get(Calendar.DAY_OF_YEAR) == now.getActualMaximum(Calendar.DAY_OF_YEAR))
-        Http(context.system).singleRequest(
-          HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=YEAR&shopcode=" + shopCode)
-        )
+    }
+    else if (now.get(Calendar.DAY_OF_YEAR) == now.getActualMaximum(Calendar.DAY_OF_YEAR)) {
+      val today = Calendar.getInstance()
+      today.add(Calendar.YEAR, -1)
+      val from = today.get(Calendar.YEAR) + "-" + today.get(Calendar.MONTH) + "-" + today.get(Calendar.DAY_OF_MONTH)
+      val to = now.get(Calendar.YEAR) + "-" + now.get(Calendar.MONTH) + "-" + now.get(Calendar.DAY_OF_MONTH)
+
+      val cards = getCards(from, to).toJson
+
+      Http(context.system).singleRequest(
+        HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=YEAR&shopcode=" + shopCode, entity = HttpEntity(ContentTypes.`application/json`, cards.prettyPrint))
+      )
+    }
+  }
+
+  private def getCards(from: String, to: String): List[Int] = {
+    val connectionString = "jdbc:postgresql://localhost:5432/shopdb?user=postgres&password=0212"
+
+    classOf[org.postgresql.Driver]
+
+    val connection = DriverManager.getConnection(connectionString)
+
+    try {
+      val stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+
+      stmt.execute("REFRESH MATERIALIZED VIEW shopdb.shopschema.cards_purchases")
+
+      val preparedStatement = connection.prepareStatement("SELECT DISTINCT cardid FROM shopdb.shopschema.cards_purchases WHERE date::date BETWEEN ?::date AND ?::date;")
+      preparedStatement.setString(1, from)
+      preparedStatement.setString(2, to)
+      val resultSet = preparedStatement.executeQuery()
+
+      def iter: Iterator[ResultSet] = new Iterator[ResultSet] {
+        val rs = resultSet
+        override def hasNext: Boolean = rs.next()
+        override def next(): ResultSet = rs
+      }
+
+      val cards = for (_ <- iter) yield {
+        resultSet.getInt("cardid")
+      }
+
+      cards.toList
+
+    } catch {
+      case e: Exception => e.printStackTrace(); null
+    } finally {
+      connection.close()
+    }
   }
 
   private def sendCacheFile(file: File) = {
