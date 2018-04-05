@@ -81,6 +81,94 @@ class Window(QMainWindow):
 
         tabBar.show()
 
+    def shopChooseCardWindow(self, isCommon):
+        tabBar = QTabWidget(self)
+
+        tabBar.resize(self.width, self.height)
+        tab1 = self.currentShopTab
+        tab2 = QWidget()
+        tabBar.addTab(tab1, "Shops")
+        tabBar.addTab(tab2, "Cards")
+
+        tabBar.setCurrentIndex(1)
+
+        self.currentCardTab = tab2
+
+        back = QPushButton("Back")
+        back.setFixedWidth(50)
+
+        back.pressed.connect(lambda: self.shopDefaultWindow(1))
+
+        tree = QTreeWidget()
+        tree.setHeaderLabel("Choose a time period")
+
+        parent = QTreeWidgetItem(tree)
+        parent.setText(0, "Years")
+        parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
+        years = [2015, 2016, 2017, 2018]
+        for year in years:
+            child = QTreeWidgetItem(parent)
+            child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
+            child.setText(0, str(year))
+            child.setCheckState(0, Qt.Unchecked)
+
+        parent = QTreeWidgetItem(tree)
+        parent.setText(0, "Months")
+        parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
+        months = [1, 2, 3]
+        for month in months:
+            child = QTreeWidgetItem(parent)
+            child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
+            child.setText(0, str(month))
+            child.setCheckState(0, Qt.Unchecked)
+
+        parent = QTreeWidgetItem(tree)
+        parent.setText(0, "Weeks")
+        parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
+        weeks = [1, 2, 3]
+        for week in weeks:
+            child = QTreeWidgetItem(parent)
+            child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
+            child.setText(0, str(week))
+            child.setCheckState(0, Qt.Unchecked)
+
+        shopList = QComboBox()
+        if isCommon:
+            itemList = ["The whole company", "Moscow", "St. Petersburg", "Riga"]
+        else:
+            itemList = ["Moscow 1","Moscow 2", "Moscow 3"]
+        shopList.addItems(itemList)
+
+        showTable = QPushButton("Show Table")
+        showTable.pressed.connect(lambda: self.showTableCardWindow(
+            itemList[shopList.currentIndex()],
+            [item for item in tree.topLevelItem(0).takeChildren() if item.checkState(0) > 0],
+            [item for item in tree.topLevelItem(1).takeChildren() if item.checkState(0) > 0],
+            [item for item in tree.topLevelItem(2).takeChildren() if item.checkState(0) > 0],
+            isCommon))
+
+        showTable.setDisabled(True)
+
+        def checkDates():
+            res = True
+            res = res and tree.topLevelItem(0).checkState(0) > 0
+            res = res and (
+                    (tree.topLevelItem(1).checkState(0) > 0) ^ (tree.topLevelItem(2).checkState(0) > 0)
+                    or ((tree.topLevelItem(1).checkState(0) == 0) and (tree.topLevelItem(2).checkState(0) == 0)))
+
+            return res
+
+        tree.itemClicked.connect(lambda: showTable.setDisabled(False) if checkDates() else showTable.setDisabled(True))
+
+        vbox = QVBoxLayout(tab2)
+        vbox.addWidget(tree)
+        vbox.addWidget(shopList)
+        vbox.addWidget(showTable)
+        vbox.addStretch(1)
+        vbox.addWidget(back)
+
+        tabBar.show()
+
     def shopChooseShopWindow(self, isCommon):
         tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
@@ -136,7 +224,7 @@ class Window(QMainWindow):
         shopList.addItems(itemList)
 
         showTable = QPushButton("Show Table")
-        showTable.pressed.connect(lambda: self.showTableWindow(
+        showTable.pressed.connect(lambda: self.showTableShopWindow(
             itemList[shopList.currentIndex()],
             [item for item in tree.topLevelItem(0).takeChildren() if item.checkState(0) > 0],
             [item for item in tree.topLevelItem(1).takeChildren() if item.checkState(0) > 0],
@@ -165,12 +253,36 @@ class Window(QMainWindow):
 
         tabBar.show()
 
-
-    def showTableWindow(self, shopName, years, months, days, isCommon):
+    def showTableCardWindow(self, shopName, years, months, weeks, isCommon):
         print(shopName)
         print([year.text(0) for year in years])
         print([month.text(0) for month in months])
-        print([day.text(0) for day in days])
+        print([week.text(0) for week in weeks])
+
+        tabBar = QTabWidget()
+        tabBar.resize(self.width, self.height)
+        tab1 = self.currentShopTab
+        tab2 = QWidget()
+        tabBar.addTab(tab1, "Shops")
+        tabBar.addTab(tab2, "Cards")
+
+        self.currentCardTab = tab2
+
+        back = QPushButton("Back")
+        back.setFixedWidth(50)
+        back.pressed.connect(lambda: self.shopChooseCardWindow(isCommon))
+
+        dates = [year.text(0) for year in years]
+
+        print(dates)
+
+        # TODO сделать таблицу
+
+    def showTableShopWindow(self, shopName, years, months, weeks, isCommon):
+        print(shopName)
+        print([year.text(0) for year in years])
+        print([month.text(0) for month in months])
+        print([week.text(0) for week in weeks])
 
         tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
@@ -270,7 +382,7 @@ class Window(QMainWindow):
         manPairsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
             [i[2] for i in manFreqPairsList],
             ["(" + str(i[0]) + "," + str(i[1]) + ")" for i in manFreqPairsList],
-            shopName, years, months, days, isCommon, "Frequency"
+            shopName, years, months, weeks, isCommon, "Frequency"
         ))
         manPairs = QVBoxLayout()
         manPairs.addWidget(manFreqPairsTable)
@@ -280,7 +392,7 @@ class Window(QMainWindow):
         manItemsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
             [i[1] for i in manItemList],
             [str(i[0]) for i in manItemList],
-            shopName, years, months, days, isCommon, "Count"
+            shopName, years, months, weeks, isCommon, "Count"
         ))
         manItems = QVBoxLayout()
         manItems.addWidget(manItemTable)
@@ -290,7 +402,7 @@ class Window(QMainWindow):
         womanPairsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
             [i[2] for i in womanFreqPairsList],
             ["(" + str(i[0]) + "," + str(i[1]) + ")" for i in womanFreqPairsList],
-            shopName, years, months, days, isCommon, "Frequency"
+            shopName, years, months, weeks, isCommon, "Frequency"
         ))
         womanPairs = QVBoxLayout()
         womanPairs.addWidget(womanFreqPairsTable)
@@ -300,7 +412,7 @@ class Window(QMainWindow):
         womanItemsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
             [i[1] for i in womanItemList],
             [str(i[0]) for i in womanItemList],
-            shopName, years, months, days, isCommon, "Count"
+            shopName, years, months, weeks, isCommon, "Count"
         ))
         womanItems = QVBoxLayout()
         womanItems.addWidget(womanItemTable)
@@ -316,7 +428,7 @@ class Window(QMainWindow):
         toExcel.pressed.connect(lambda: self.toExcel(stats, dates, labels))
 
         diagram = QPushButton("View Diagram")
-        diagram.pressed.connect(lambda: self.viewDiagram(stats, dates, labels, shopName, years, months, days, isCommon))
+        diagram.pressed.connect(lambda: self.viewDiagram(stats, dates, labels, shopName, years, months, weeks, isCommon))
 
         manWomanLabel = QHBoxLayout()
         manWomanLabel.addWidget(QLabel("Man"))
@@ -393,7 +505,7 @@ class Window(QMainWindow):
 
         back = QPushButton("Back")
         back.setFixedWidth(50)
-        back.pressed.connect(lambda: self.showTableWindow(shopName, years, months, days, isCommon))
+        back.pressed.connect(lambda: self.showTableShopWindow(shopName, years, months, days, isCommon))
 
         vbox = QVBoxLayout(tab1)
         vbox.addWidget(pic)
@@ -470,7 +582,7 @@ class Window(QMainWindow):
 
         back = QPushButton("Back")
         back.setFixedWidth(50)
-        back.pressed.connect(lambda: self.showTableWindow(shopName, years, months, days, isCommon))
+        back.pressed.connect(lambda: self.showTableShopWindow(shopName, years, months, days, isCommon))
 
         toFile = QPushButton("Save to file")
         toFile.pressed.connect(lambda: self.toFile(currentPlot))
