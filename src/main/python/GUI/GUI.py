@@ -17,6 +17,9 @@ class Window(QMainWindow):
         self.height = 720
         super().__init__()
 
+        self.currentShopTab = None
+        self.currentCardTab = None
+
         self.initUi()
 
     def initUi(self):
@@ -24,7 +27,7 @@ class Window(QMainWindow):
         self.center()
         self.setWindowTitle('RetailDB')
 
-        self.shopDefaultWindow()
+        self.shopDefaultWindow(0)
 
         self.show()
 
@@ -34,7 +37,7 @@ class Window(QMainWindow):
         frameGm.moveCenter(centerPoint)
         self.move(frameGm.topLeft())
 
-    def shopDefaultWindow(self):
+    def shopDefaultWindow(self, activeTab):
         tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
@@ -42,33 +45,58 @@ class Window(QMainWindow):
         tabBar.addTab(tab1, "Shops")
         tabBar.addTab(tab2, "Cards")
 
-        commonStats = QPushButton("Show common statistics")
-        shopStats = QPushButton("Show shop statistics")
+        if activeTab == 0:
+            self.currentShopTab = [tab1]
+        elif activeTab == 1:
+            self.currentCardTab = [tab2]
+        else:
+            raise RuntimeError("active tab > 1")
 
-        shopStats.pressed.connect(lambda: self.shopChooseWindow(False))
-        commonStats.pressed.connect(lambda: self.shopChooseWindow(True))
+        tabBar.setCurrentIndex(activeTab)
 
-        vbox = QVBoxLayout(tab1)
-        vbox.addWidget(shopStats)
-        vbox.addWidget(commonStats)
-        vbox.addStretch()
+        commonStats1 = QPushButton("Show common statistics")
+        shopStats1 = QPushButton("Show shop statistics")
+
+        shopStats1.pressed.connect(lambda: self.shopChooseShopWindow(False))
+        commonStats1.pressed.connect(lambda: self.shopChooseShopWindow(True))
+
+        vbox1 = QVBoxLayout(tab1)
+        vbox1.addWidget(shopStats1)
+        vbox1.addWidget(commonStats1)
+        vbox1.addStretch()
+
+        commonStats2 = QPushButton("Show common statistics")
+        shopStats2 = QPushButton("Show shop statistics")
+
+        shopStats2.pressed.connect(lambda: self.shopChooseCardWindow(False))
+        commonStats2.pressed.connect(lambda: self.shopChooseCardWindow(True))
+
+        vbox2 = QVBoxLayout(tab2)
+        vbox2.addWidget(shopStats2)
+        vbox2.addWidget(commonStats2)
+        vbox2.addStretch()
+
+        self.currentShopTab = tab1
+        self.currentCardTab = tab2
 
         tabBar.show()
 
-    def shopChooseWindow(self, isCommon):
+    def shopChooseShopWindow(self, isCommon):
         tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
-        tab2 = QWidget()
+        tab2 = self.currentCardTab
         tabBar.addTab(tab1, "Shops")
         tabBar.addTab(tab2, "Cards")
 
+        self.currentShopTab = tab1
+
         back = QPushButton("Back")
         back.setFixedWidth(50)
-        back.pressed.connect(lambda: self.shopDefaultWindow())
+        back.pressed.connect(lambda: self.shopDefaultWindow(0))
 
         tree = QTreeWidget()
-        tree.setHeaderLabel("Choose a time")
+        tree.setHeaderLabel("Choose a time period")
 
         parent = QTreeWidgetItem(tree)
         parent.setText(0, "Years")
@@ -147,13 +175,15 @@ class Window(QMainWindow):
         tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
-        tab2 = QWidget()
+        tab2 = self.currentCardTab
         tabBar.addTab(tab1, "Shops")
         tabBar.addTab(tab2, "Cards")
 
+        self.currentShopTab = tab1
+
         back = QPushButton("Back")
         back.setFixedWidth(50)
-        back.pressed.connect(lambda: self.shopChooseWindow(isCommon))
+        back.pressed.connect(lambda: self.shopChooseShopWindow(isCommon))
 
         dates = [year.text(0) for year in years]  # это для тестирования
 
@@ -237,21 +267,41 @@ class Window(QMainWindow):
                 womanFreqPairsTable.setItem(i, j, QTableWidgetItem(str(womanFreqPairsList[i][j])))
 
         manPairsButton = QPushButton("View Diagram")
+        manPairsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
+            [i[2] for i in manFreqPairsList],
+            ["(" + str(i[0]) + "," + str(i[1]) + ")" for i in manFreqPairsList],
+            shopName, years, months, days, isCommon, "Frequency"
+        ))
         manPairs = QVBoxLayout()
         manPairs.addWidget(manFreqPairsTable)
         manPairs.addWidget(manPairsButton)
 
         manItemsButton = QPushButton("View Diagram")
+        manItemsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
+            [i[1] for i in manItemList],
+            [str(i[0]) for i in manItemList],
+            shopName, years, months, days, isCommon, "Count"
+        ))
         manItems = QVBoxLayout()
         manItems.addWidget(manItemTable)
         manItems.addWidget(manItemsButton)
 
         womanPairsButton = QPushButton("View Diagram")
+        womanPairsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
+            [i[2] for i in womanFreqPairsList],
+            ["(" + str(i[0]) + "," + str(i[1]) + ")" for i in womanFreqPairsList],
+            shopName, years, months, days, isCommon, "Frequency"
+        ))
         womanPairs = QVBoxLayout()
         womanPairs.addWidget(womanFreqPairsTable)
         womanPairs.addWidget(womanPairsButton)
 
         womanItemsButton = QPushButton("View Diagram")
+        womanItemsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
+            [i[1] for i in womanItemList],
+            [str(i[0]) for i in womanItemList],
+            shopName, years, months, days, isCommon, "Count"
+        ))
         womanItems = QVBoxLayout()
         womanItems.addWidget(womanItemTable)
         womanItems.addWidget(womanItemsButton)
@@ -284,6 +334,75 @@ class Window(QMainWindow):
 
         tabBar.show()
 
+    def viewCountFreqDiagram(self, stats, elements, shopName, years, months, days, isCommon, yLabel):
+        print(stats, elements)
+
+        global currentPlot
+
+        def drawPlot():
+            global currentPlot
+
+            width = 1 / (len(elements))
+            index = np.arange(len(elements))
+            xs = []
+            for i in range(len(elements)):
+                xs.append(stats[i])
+
+            bar(index, xs, width=width, zorder=2)
+
+            xticks(index, elements, rotation=30, ha="right")
+            ylabel(yLabel)
+            tight_layout()
+            grid(axis='y')
+
+            buf = io.BytesIO()
+
+            gcf().set_size_inches(10.0, 6.4)
+
+            savefig(buf, format='png', dpi=100)
+            buf.seek(0)
+
+            im = Image.open(buf)
+
+            imshow(im)
+            buf.close()
+
+            currentPlot = im
+
+            pic1 = QLabel()
+            pic1.setGeometry(0, 0, 640, 480)
+
+            pic1.setPixmap(QPixmap.fromImage(ImageQt(im)))
+
+            clf()
+            return pic1
+
+        tabBar = QTabWidget(self)
+        tabBar.resize(self.width, self.height)
+        tab1 = QWidget()
+        tab2 = self.currentCardTab
+        tabBar.addTab(tab1, "Shops")
+        tabBar.addTab(tab2, "Cards")
+
+        self.currentShopTab = tab1
+
+        pic = drawPlot()
+
+        toFile = QPushButton("Save to file")
+        toFile.pressed.connect(lambda: self.toFile(currentPlot))
+
+        back = QPushButton("Back")
+        back.setFixedWidth(50)
+        back.pressed.connect(lambda: self.showTableWindow(shopName, years, months, days, isCommon))
+
+        vbox = QVBoxLayout(tab1)
+        vbox.addWidget(pic)
+        vbox.addWidget(toFile)
+        vbox.addStretch()
+        vbox.addWidget(back)
+
+        tabBar.show()
+
     def viewDiagram(self, stats, dates, labels, shopName, years, months, days, isCommon, numberOfKPI=0):
         hbox = QHBoxLayout()
         global currentPlot
@@ -306,7 +425,9 @@ class Window(QMainWindow):
 
             buf = io.BytesIO()
 
-            savefig(buf, format='png')
+            gcf().set_size_inches(10.0, 6.4)
+
+            savefig(buf, format='png', dpi=100)
             buf.seek(0)
 
             im = Image.open(buf)
@@ -328,9 +449,11 @@ class Window(QMainWindow):
         tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
-        tab2 = QWidget()
+        tab2 = self.currentCardTab
         tabBar.addTab(tab1, "Shops")
         tabBar.addTab(tab2, "Cards")
+
+        self.currentShopTab = tab1
 
         pic = drawPlot(numberOfKPI)
 
