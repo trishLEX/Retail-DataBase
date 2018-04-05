@@ -12,7 +12,7 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
   implicit val jsonStats = jsonFormat12(Stats.apply)
   implicit val jsonShopStats = jsonFormat2(ShopStats)
   implicit val jsonCard = jsonFormat3(Card)
-  implicit val jsonCardStatsMap = jsonFormat2(CardStatsMap)
+  implicit val jsonCardStatsMap = jsonFormat2(CardStatsMap.apply)
   implicit val jsonCardStats = jsonFormat2(CardStats)
 
   private val connectionString = "jdbc:postgresql://localhost:5432/maindb?user=postgres&password=0212"
@@ -137,7 +137,17 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
         prpStmnt.setString(1, insertedStats.statMap.toJson.toString())
         prpStmnt.setInt(2, insertedStats.cardID)
 
-        var stmt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfMonth}', ?::jsonb) WHERE cardID = ?")
+        var stmt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfDay}', ?::jsonb) WHERE cardID = ?")
+        stmt.setString(1, insertedStats.statMap.toJson.toString())
+        stmt.setInt(2, insertedStats.cardID)
+        stmt.execute()
+
+        stmt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfWeek}', ?::jsonb) WHERE cardID = ?")
+        stmt.setString(1, insertedStats.statMap.toJson.toString())
+        stmt.setInt(2, insertedStats.cardID)
+        stmt.execute()
+
+        stmt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfMonth}', ?::jsonb) WHERE cardID = ?")
         stmt.setString(1, insertedStats.statMap.toJson.toString())
         stmt.setInt(2, insertedStats.cardID)
         stmt.execute()
@@ -162,9 +172,14 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
 
         println("INSERTED STATS: " + mergedStats)
 
-        var stmt = connection.prepareStatement("SELECT stats->'statsOfMonth' s FROM MainDB.shopschema.Card WHERE cardID = ?")
+        var stmt = connection.prepareStatement("SELECT stats->'statsOfWeek' s FROM MainDB.shopschema.Card WHERE cardID = ?")
         stmt.setInt(1, storedCardID)
         var res = stmt.executeQuery()
+        val newStatsOfWeek  = res.getString("s").parseJson.convertTo[CardStatsMap] + insertedStats.statMap
+
+        stmt = connection.prepareStatement("SELECT stats->'statsOfMonth' s FROM MainDB.shopschema.Card WHERE cardID = ?")
+        stmt.setInt(1, storedCardID)
+        res = stmt.executeQuery()
         res.next()
         val newStatsOfMonth = res.getString("s").parseJson.convertTo[CardStatsMap] + insertedStats.statMap
 
@@ -173,6 +188,16 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
         res = stmt.executeQuery()
         res.next()
         val newStatsOfYear = res.getString("s").parseJson.convertTo[CardStatsMap] + insertedStats.statMap
+
+        stmt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfDay}', ?::jsonb) WHERE cardID = ?")
+        stmt.setString(1, insertedStats.statMap.toJson.toString())
+        stmt.setInt(2, insertedStats.cardID)
+        stmt.execute()
+
+        stmt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfWeek}', ?::jsonb) WHERE cardID = ?")
+        stmt.setString(1, newStatsOfWeek.toJson.toString())
+        stmt.setInt(2, storedCardID)
+        stmt.execute()
 
         stmt = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfMonth}', ?::jsonb) WHERE cardID = ?")
         stmt.setString(1, newStatsOfMonth.toJson.toString())

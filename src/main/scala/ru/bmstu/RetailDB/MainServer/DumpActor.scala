@@ -6,7 +6,7 @@ import java.util.Calendar
 
 import akka.actor.Actor
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
+import org.postgresql.util.PGobject
 import spray.json._
 
 class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
@@ -14,23 +14,24 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
   private val PATH_TO_DUMPED_STATS = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\main\\scala\\ru\\bmstu\\RetailDB\\MainServer\\DumpedStats"
 
-  private val monthScheduler = QuartzSchedulerExtension(context.system)
-  monthScheduler.createSchedule("monthScheduler", cronExpression = "0 0 0 ? * MON *")
-  //monthScheduler.createSchedule("monthScheduler", cronExpression = "50 34 12 ? * *")
-  monthScheduler.schedule("monthScheduler", self, "MONTH CARD")
-
-  private val yearScheduler = QuartzSchedulerExtension(context.system)
-  yearScheduler.createSchedule("yearScheduler", cronExpression = "0 0 0 1 JAN ? *")
-  yearScheduler.schedule("yearScheduler", self, "YEAR CARD")
+//  private val monthScheduler = QuartzSchedulerExtension(context.system)
+//  monthScheduler.createSchedule("monthScheduler", cronExpression = "0 0 0 ? * MON *")
+//  //monthScheduler.createSchedule("monthScheduler", cronExpression = "50 34 12 ? * *")
+//  monthScheduler.schedule("monthScheduler", self, "MONTH CARD")
+//
+//  private val yearScheduler = QuartzSchedulerExtension(context.system)
+//  yearScheduler.createSchedule("yearScheduler", cronExpression = "0 0 0 1 JAN ? *")
+//  yearScheduler.schedule("yearScheduler", self, "YEAR CARD")
 
   implicit val jsonStats = jsonFormat12(Stats.apply)
+  implicit val jsonCardsStatMap = jsonFormat2(CardStatsMap.apply)
 
   override def receive: Receive = {
-    case ("WEEK",  shopcode: Int) => dump("WEEK",  shopcode)
-    case ("MONTH", shopcode: Int) => dump("MONTH", shopcode)
-    case ("YEAR",  shopcode: Int) => dump("YEAR",  shopcode)
-    case ("MONTH CARD")           => cleanMonthCard()
-    case ("YEAR CARD")            => cleanYearCard()
+    case ("WEEK",  shopcode: Int, cards: List[Int]) => dump("WEEK",  shopcode, cards)
+    case ("MONTH", shopcode: Int, cards: List[Int]) => dump("MONTH", shopcode, cards)
+    case ("YEAR",  shopcode: Int, cards: List[Int]) => dump("YEAR",  shopcode, cards)
+//    case ("MONTH CARD")           => cleanMonthCard()
+//    case ("YEAR CARD")            => cleanYearCard()
   }
 
   private def cleanMonthCard() = {
@@ -61,7 +62,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     }
   }
 
-  private def dump(date: String, shopCode: Int) = {
+  private def dump(date: String, shopCode: Int, cards: List[Int]) = {
     classOf[org.postgresql.Driver]
 
     val connection = DriverManager.getConnection(connectionString)
@@ -74,11 +75,11 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       println("DATE: " + date)
 
       if (date == "WEEK")
-        dumpWeek (connection, stmt, shopCode, year, Calendar.getInstance().get(Calendar.WEEK_OF_YEAR))
+        dumpWeek (connection, stmt, shopCode, year, Calendar.getInstance().get(Calendar.WEEK_OF_YEAR), cards)
       else if (date == "MONTH")
-        dumpMonth(connection, stmt, shopCode, year, Calendar.getInstance().get(Calendar.MONTH))
+        dumpMonth(connection, stmt, shopCode, year, Calendar.getInstance().get(Calendar.MONTH), cards)
       else if (date == "YEAR")
-        dumpYear (connection, stmt, shopCode, year)
+        dumpYear (connection, stmt, shopCode, year, cards)
 
     } catch {
       case e: Exception => e.printStackTrace(); null
@@ -87,89 +88,181 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     }
   }
 
-  private def dumpWeek(connection: Connection, statement: Statement, shopCode: Int, year: Int, dateNumber: Int) = {
-    val statsOfWeek = getStats(connection, statement, shopCode, "Week").parseJson.convertTo[Stats].countStats()
+  private def dumpWeek(connection: Connection, statement: Statement, shopCode: Int, year: Int, week: Int, cards: List[Int]) = {
+    val statsOfWeek = getShopStats(connection, statement, shopCode, "Week").parseJson.convertTo[Stats].countStats()
 
-    val insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Weeks (year, week, shopcode, stats) VALUES (?, ?, ?, (SELECT stats->'statsOfYear' FROM MainDB.shopschema.Shops WHERE shopCode = ?));")
+    //println(statsOfWeek)
+
+    var insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Weeks (year, week, shopcode, stats) VALUES (?, ?, ?, ?::jsonb);")
     insertStmt.setInt(1, year)
-    insertStmt.setInt(2, dateNumber)
+    insertStmt.setInt(2, week)
     insertStmt.setInt(3, shopCode)
-    insertStmt.setInt(4, shopCode)
+    insertStmt.setString(4, statsOfWeek.toJson.toString())
     insertStmt.execute()
 
     val emptyStats = Stats.makeEmpty()
-    val dayStats = getStats(connection, statement, shopCode, "Day")
-    val monthStats = getStats(connection, statement, shopCode, "Month")
-    val yearStats = getStats(connection, statement, shopCode, "Year")
+    val dayStats = getShopStats(connection, statement, shopCode, "Day")
+    val monthStats = getShopStats(connection, statement, shopCode, "Month")
+    val yearStats = getShopStats(connection, statement, shopCode, "Year")
 
     val json = "{\"statsOfDay\":" + dayStats + ", \"statsOfWeek\":" + emptyStats.toJson.toString() +
       ", \"statsOfMonth\": " + monthStats + ", \"statsOfYear\": " + yearStats + "}"
 
-    val preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Shops SET stats = ?::jsonb WHERE shopCode = ?")
-    preparedStatement.setString(1, json.parseJson.toString)
+    var preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Shops SET stats = ?::jsonb WHERE shopCode = ?")
+    preparedStatement.setString(1, json.parseJson.toString())
     preparedStatement.setInt(2, shopCode)
 
     //println(json.parseJson.prettyPrint)
 
     //preparedStatement.execute()
+
+    val cardsArray = new PGobject
+    cardsArray.setType("INT[]")
+    cardsArray.setValue(cards.mkString(","))
+
+    cards.foreach { cardID =>
+      insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Card_Stats_Weeks (year, week, cardid, stats) VALUES (?, ?, ?, (SELECT stats->'statsOfWeek' FROM MainDB.shopschema.Card WHERE cardID = ?));")
+      insertStmt.setInt(1, year)
+      insertStmt.setInt(2, week)
+      insertStmt.setInt(3, cardID)
+      insertStmt.setInt(4, cardID)
+      insertStmt.execute()
+
+      val emptyStats = CardStatsMap.makeEmpty()
+      val dayStats = getCardStats(connection, statement, cardID, "Day")
+      val monthStats = getCardStats(connection, statement, cardID, "Month")
+      val yearStats = getCardStats(connection, statement, cardID, "Year")
+
+      val json = "{\"statsOfDay\":" + dayStats + ", \"statsOfWeek\":" + emptyStats.toJson.toString() +
+        ", \"statsOfMonth\": " + monthStats + ", \"statsOfYear\": " + yearStats + "}"
+
+      preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = ?::jsonb WHERE cardID = ?")
+      preparedStatement.setString(1, json.parseJson.toString())
+      preparedStatement.setInt(2, cardID)
+
+      //preparedStatement.execute()
+    }
+
   }
 
-  private def dumpMonth(connection: Connection, statement: Statement, shopCode: Int, year: Int, dateNumber: Int) = {
-    val statsOfMonth = getStats(connection, statement, shopCode, "Month").parseJson.convertTo[Stats].countStats()
+  private def dumpMonth(connection: Connection, statement: Statement, shopCode: Int, year: Int, month: Int, cards: List[Int]) = {
+    val statsOfMonth = getShopStats(connection, statement, shopCode, "Month").parseJson.convertTo[Stats].countStats()
 
-    val insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Months (year, month, shopcode, stats) VALUES (?, ?, ?, (SELECT stats->'statsOfYear' FROM MainDB.shopschema.Shops WHERE shopCode = ?));")
+    var insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Months (year, month, shopcode, stats) VALUES (?, ?, ?, ?::jsonb);")
     insertStmt.setInt(1, year)
-    insertStmt.setInt(2, dateNumber)
+    insertStmt.setInt(2, month)
     insertStmt.setInt(3, shopCode)
-    insertStmt.setInt(4, shopCode)
+    insertStmt.setString(4, statsOfMonth.toJson.toString())
     insertStmt.execute()
 
     val emptyStats = Stats.makeEmpty()
-    val dayStats = getStats(connection, statement, shopCode, "Day")
-    val weekStats = getStats(connection, statement, shopCode, "Week")
-    val yearStats = getStats(connection, statement, shopCode, "Year")
+    val dayStats = getShopStats(connection, statement, shopCode, "Day")
+    val weekStats = getShopStats(connection, statement, shopCode, "Week")
+    val yearStats = getShopStats(connection, statement, shopCode, "Year")
 
     val json = "{\"statsOfDay\":" + dayStats + ", \"statsOfWeek\":" + weekStats +
       ", \"statsOfMonth\": " + emptyStats.toJson.toString() + ", \"statsOfYear\": " + yearStats + "}"
 
-    val preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Shops SET stats = ?::jsonb WHERE shopCode = ?")
+    var preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Shops SET stats = ?::jsonb WHERE shopCode = ?")
     preparedStatement.setString(1, json.parseJson.toString)
     preparedStatement.setInt(2, shopCode)
 
     //println(json.parseJson.prettyPrint)
 
     //preparedStatement.execute()
+
+    val cardsArray = new PGobject
+    cardsArray.setType("INT[]")
+    cardsArray.setValue(cards.mkString(","))
+
+    cards.foreach { cardID =>
+      insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Card_Stats_Months (year, month, cardID, stats) VALUES (?, ?, ?, (SELECT stats->'statsOfMonth' FROM MainDB.shopschema.Card WHERE cardID = ?));")
+      insertStmt.setInt(1, year)
+      insertStmt.setInt(2, month)
+      insertStmt.setInt(3, cardID)
+      insertStmt.setInt(4, cardID)
+      insertStmt.execute()
+
+      val emptyStats = CardStatsMap.makeEmpty()
+      val dayStats = getCardStats(connection, statement, cardID, "Day")
+      val weekStats = getCardStats(connection, statement, cardID, "Week")
+      val yearStats = getCardStats(connection, statement, cardID, "Year")
+
+      val json = "{\"statsOfDay\":" + dayStats + ", \"statsOfWeek\":" + weekStats +
+        ", \"statsOfMonth\": " + emptyStats.toJson.toString() + ", \"statsOfYear\": " + yearStats + "}"
+
+      preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = ?::jsonb WHERE cardID = ?")
+      preparedStatement.setString(1, json.parseJson.toString())
+      preparedStatement.setInt(2, cardID)
+
+      //preparedStatement.execute()
+    }
   }
 
-  private def dumpYear(connection: Connection, statement: Statement, shopCode: Int, dateNumber: Int) = {
-    val statsOfYear = getStats(connection, statement, shopCode, "Year").parseJson.convertTo[Stats].countStats()
+  private def dumpYear(connection: Connection, statement: Statement, shopCode: Int, year: Int, cards: List[Int]) = {
+    val statsOfYear = getShopStats(connection, statement, shopCode, "Year").parseJson.convertTo[Stats].countStats()
 
-    val insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Years (year, shopcode, stats) VALUES (?, ?, (SELECT stats->'statsOfYear' FROM MainDB.shopschema.Shops WHERE shopCode = ?));")
-    insertStmt.setInt(1, dateNumber)
+    var insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Years (year, shopcode, stats) VALUES (?, ?, ?);")
+    insertStmt.setInt(1, year)
     insertStmt.setInt(2, shopCode)
-    insertStmt.setInt(3, shopCode)
+    insertStmt.setString(3, statsOfYear.toJson.toString())
     insertStmt.execute()
 
     val emptyStats = Stats.makeEmpty()
-    val dayStats = getStats(connection, statement, shopCode, "Day")
-    val weekStats = getStats(connection, statement, shopCode, "Week")
-    val monthStats = getStats(connection, statement, shopCode, "Month")
+    val dayStats = getShopStats(connection, statement, shopCode, "Day")
+    val weekStats = getShopStats(connection, statement, shopCode, "Week")
+    val monthStats = getShopStats(connection, statement, shopCode, "Month")
 
     val json = "{\"statsOfDay\":" + dayStats + ", \"statsOfWeek\":" + weekStats +
       ", \"statsOfMonth\": " + monthStats + ", \"statsOfYear\": " + emptyStats.toJson.toString() + "}"
 
-    val preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Shops SET stats = ?::jsonb WHERE shopCode = ?")
+    var preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Shops SET stats = ?::jsonb WHERE shopCode = ?")
     preparedStatement.setString(1, json.parseJson.toString)
     preparedStatement.setInt(2, shopCode)
 
     //println(json.parseJson.prettyPrint)
 
     //preparedStatement.execute()
+
+    val cardsArray = new PGobject
+    cardsArray.setType("INT[]")
+    cardsArray.setValue(cards.mkString(","))
+
+    cards.foreach { cardID =>
+      insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Card_Stats_Years (year, cardID, stats) VALUES (?, ?, (SELECT stats->'statsOfYear' FROM MainDB.shopschema.Card WHERE cardID = ?));")
+      insertStmt.setInt(1, year)
+      insertStmt.setInt(2, cardID)
+      insertStmt.setInt(3, cardID)
+      insertStmt.execute()
+
+      val emptyStats = CardStatsMap.makeEmpty()
+      val dayStats = getCardStats(connection, statement, cardID, "Day")
+      val weekStats = getCardStats(connection, statement, cardID, "Week")
+      val monthStats = getCardStats(connection, statement, cardID, "Month")
+
+      val json = "{\"statsOfDay\":" + dayStats + ", \"statsOfWeek\":" + weekStats +
+        ", \"statsOfMonth\": " + monthStats + ", \"statsOfYear\": " + emptyStats.toJson.toString() + "}"
+
+      preparedStatement = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = ?::jsonb WHERE cardID = ?")
+      preparedStatement.setString(1, json.parseJson.toString())
+      preparedStatement.setInt(2, cardID)
+
+      //preparedStatement.execute()
+    }
   }
 
-  private def getStats(connection: Connection, statement: Statement, shopCode: Int, date: String): String = {
+  private def getShopStats(connection: Connection, statement: Statement, shopCode: Int, date: String): String = {
     val preparedStatement = connection.prepareStatement("SELECT stats->'statsOf" + date + "' AS S FROM MainDB.shopschema.shops WHERE shopCode = ?")
     preparedStatement.setInt(1, shopCode)
+    val resSet = preparedStatement.executeQuery()
+    resSet.next()
+    val stats = resSet.getString("s")
+    stats
+  }
+
+  private def getCardStats(connection: Connection, statement: Statement, cardID: Int, date: String): String = {
+    val preparedStatement = connection.prepareStatement("SELECT stats->'statsOf" + date + "' AS S FROM MainDB.shopschema.card WHERE cardID = ?")
+    preparedStatement.setInt(1, cardID)
     val resSet = preparedStatement.executeQuery()
     resSet.next()
     val stats = resSet.getString("s")

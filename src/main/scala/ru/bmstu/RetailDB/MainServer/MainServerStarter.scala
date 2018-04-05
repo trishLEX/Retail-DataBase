@@ -39,11 +39,13 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
           }
         } ~
         pathSingleSlash {
-          parameter('date, 'shopcode.as[Int]) {
-            case ("WEEK",  shopcode)  => complete{dumpActor ! ("WEEK",  shopcode);  HttpResponse(StatusCodes.OK)}
-            case ("MONTH", shopcode)  => complete{dumpActor ! ("MONTH", shopcode);  HttpResponse(StatusCodes.OK)}
-            case ("YEAR",  shopcode)  => complete{dumpActor ! ("YEAR",  shopcode);  HttpResponse(StatusCodes.OK)}
-            case _                    => complete(HttpResponse(StatusCodes.BadRequest))
+          entity(as[List[Int]]) { cards =>
+            parameter('date, 'shopcode.as[Int]) {
+              case ("WEEK",  shopcode) => complete {dumpActor ! ("WEEK",  shopcode, cards); HttpResponse(StatusCodes.OK)}
+              case ("MONTH", shopcode) => complete {dumpActor ! ("MONTH", shopcode, cards); HttpResponse(StatusCodes.OK)}
+              case ("YEAR",  shopcode) => complete {dumpActor ! ("YEAR",  shopcode, cards); HttpResponse(StatusCodes.OK)}
+              case _                   => complete(HttpResponse(StatusCodes.BadRequest))
+            }
           }
         }
       }

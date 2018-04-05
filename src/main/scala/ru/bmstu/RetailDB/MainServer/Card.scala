@@ -23,6 +23,10 @@ case class CardStats(cardID: Int, statMap: CardStatsMap) {
   }
 }
 
+object CardStatsMap {
+  def makeEmpty() = CardStatsMap(Map.empty[String, Map[String, Int]], 0.0f)
+}
+
 case class CardStatsMap(bought: Map[String, Map[String, Int]], totalSum: Float) {
   def +(other: CardStatsMap): CardStatsMap = {
     CardStatsMap(this.bought |+| other.bought, this.totalSum + other.totalSum)
