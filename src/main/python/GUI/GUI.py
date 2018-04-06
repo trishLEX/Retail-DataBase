@@ -259,7 +259,7 @@ class Window(QMainWindow):
         print([month.text(0) for month in months])
         print([week.text(0) for week in weeks])
 
-        tabBar = QTabWidget()
+        tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
         tab1 = self.currentShopTab
         tab2 = QWidget()
@@ -268,6 +268,8 @@ class Window(QMainWindow):
 
         self.currentCardTab = tab2
 
+        tabBar.setCurrentIndex(1)
+
         back = QPushButton("Back")
         back.setFixedWidth(50)
         back.pressed.connect(lambda: self.shopChooseCardWindow(isCommon))
@@ -275,6 +277,61 @@ class Window(QMainWindow):
         dates = [year.text(0) for year in years]
 
         print(dates)
+
+        table = QTableWidget()
+        table.setColumnCount(len(dates))
+
+        # 1 - Количество чеков по картам, 2 - их % от общего числа чеков, 3 - totalSum по картам, 4 - % от общего totalSum
+        table.setRowCount(4)
+
+        stats = [[i + 1 for i in range(4)]]
+        if len(dates) == 2:
+            stats.append([i*i + 1 for i in range(4)])
+        if len(dates) == 3:
+            stats.append([i*i + 1 for i in range(4)])
+            stats.append([i*2 + 1 for i in range(4)])
+        if len(dates) == 4:
+            stats.append([i*i + 1 for i in range(4)])
+            stats.append([i*2 + 1 for i in range(4)])
+            stats.append([i*3 + 1 for i in range(4)])
+
+        for i in stats:
+            i[1] = i[1] / 15
+            i[3] = i[3] / 15
+
+        # TODO переименовать лэйблы
+        labels = ["A number of checks with cards", "Relation of a number of checks with cards to a whole number",
+                  "Total sum in checks with cards", "Relation of a total sum in checks to a whole sum"]
+
+        table.setHorizontalHeaderLabels(dates)
+        table.setVerticalHeaderLabels(labels)
+        header = table.horizontalHeader()
+        header.setFrameStyle(QFrame.Box | QFrame.Plain)
+        header.setLineWidth(1)
+        table.setHorizontalHeader(header)
+
+        for i in range(len(dates)):
+            for j in range(4):
+                table.setItem(j, i, QTableWidgetItem(str(stats[i][j])))
+
+        table.resizeColumnsToContents()
+        table.resizeRowsToContents()
+        table.horizontalHeader().setStretchLastSection(True)
+
+        toExcel = QPushButton("To Excel")
+        toExcel.pressed.connect(lambda: self.toExcelCard(stats, dates, labels))
+
+        diagram = QPushButton("View Diagram")
+        diagram.pressed.connect(lambda: self.viewCardDiagram(stats, dates, labels, shopName, years, months, weeks, isCommon))
+
+        vbox = QVBoxLayout(tab2)
+        vbox.addWidget(table)
+        vbox.addWidget(diagram)
+        vbox.addWidget(toExcel)
+        vbox.addStretch()
+        vbox.addWidget(back)
+
+        tabBar.show()
 
         # TODO сделать таблицу
 
@@ -334,6 +391,13 @@ class Window(QMainWindow):
         table.resizeColumnsToContents()
         table.resizeRowsToContents()
         table.horizontalHeader().setStretchLastSection(True)
+
+        toExcel = QPushButton("To Excel")
+        toExcel.pressed.connect(lambda: self.toExcelShop(stats, dates, labels))
+
+        diagram = QPushButton("View Diagram")
+        diagram.pressed.connect(
+            lambda: self.viewShopDiagram(stats, dates, labels, shopName, years, months, weeks, isCommon))
 
         itemPairsLabels = ["First Item", "Second Item", "Frequency"]
 
@@ -424,12 +488,6 @@ class Window(QMainWindow):
         itemPairs.addLayout(womanPairs)
         itemPairs.addLayout(womanItems)
 
-        toExcel = QPushButton("To Excel")
-        toExcel.pressed.connect(lambda: self.toExcel(stats, dates, labels))
-
-        diagram = QPushButton("View Diagram")
-        diagram.pressed.connect(lambda: self.viewDiagram(stats, dates, labels, shopName, years, months, weeks, isCommon))
-
         manWomanLabel = QHBoxLayout()
         manWomanLabel.addWidget(QLabel("Man"))
         manWomanLabel.addWidget(QLabel("Woman"))
@@ -449,10 +507,10 @@ class Window(QMainWindow):
     def viewCountFreqDiagram(self, stats, elements, shopName, years, months, days, isCommon, yLabel):
         print(stats, elements)
 
-        global currentPlot
+        global currentShopPlot
 
         def drawPlot():
-            global currentPlot
+            global currentShopPlot
 
             width = 1 / (len(elements))
             index = np.arange(len(elements))
@@ -479,7 +537,7 @@ class Window(QMainWindow):
             imshow(im)
             buf.close()
 
-            currentPlot = im
+            currentShopPlot = im
 
             pic1 = QLabel()
             pic1.setGeometry(0, 0, 640, 480)
@@ -501,7 +559,7 @@ class Window(QMainWindow):
         pic = drawPlot()
 
         toFile = QPushButton("Save to file")
-        toFile.pressed.connect(lambda: self.toFile(currentPlot))
+        toFile.pressed.connect(lambda: self.toFile(currentShopPlot))
 
         back = QPushButton("Back")
         back.setFixedWidth(50)
@@ -515,12 +573,95 @@ class Window(QMainWindow):
 
         tabBar.show()
 
-    def viewDiagram(self, stats, dates, labels, shopName, years, months, days, isCommon, numberOfKPI=0):
+    def viewCardDiagram(self, stats, dates, labels, shopName, years, months, days, isCommon, indexOfParameter=0):
         hbox = QHBoxLayout()
-        global currentPlot
+        global currentCardPlot
+
+        def drawPlot(indexOfParameter):
+            global currentCardPlot
+
+            if indexOfParameter == 0 or indexOfParameter == 2:
+                width = 1 / (len(dates))
+                index = np.arange(len(dates))
+                xs = []
+                for i in range(len(dates)):
+                    xs.append(stats[i][indexOfParameter])
+
+                bar(index, xs, width=width, zorder=2)
+
+                xticks(index, dates, rotation=30, ha="right")
+                ylabel(labels[indexOfParameter])
+                tight_layout()
+                grid(axis='y')
+
+                buf = io.BytesIO()
+
+                gcf().set_size_inches(10.0, 6.4)
+
+                savefig(buf, format='png', dpi=100)
+                buf.seek(0)
+
+                im = Image.open(buf)
+
+                imshow(im)
+                buf.close()
+
+                currentCardPlot = im
+
+                pic1 = QLabel()
+                pic1.setGeometry(0, 0, 640, 480)
+
+                pic1.setPixmap(QPixmap.fromImage(ImageQt(im)))
+
+                clf()
+                return pic1
+
+        tabBar = QTabWidget(self)
+        tabBar.resize(self.width, self.height)
+        tab1 = self.currentShopTab
+        tab2 = QWidget()
+        tabBar.addTab(tab1, "Shops")
+        tabBar.addTab(tab2, "Cards")
+
+        tabBar.setCurrentIndex(1)
+
+        self.currentCardTab = tab2
+
+        pic = drawPlot(indexOfParameter)
+
+        chooseLabel = QLabel("Choose an index:")
+        chooseBox = QComboBox()
+        chooseBox.addItems(labels)
+
+        hbox.addWidget(pic)
+        hbox.addStretch()
+        hbox.addWidget(chooseLabel)
+        hbox.addWidget(chooseBox)
+
+        chooseBox.currentIndexChanged.connect(
+            lambda: {hbox.insertWidget(0, drawPlot(chooseBox.currentIndex())), hbox.takeAt(1)})
+
+        back = QPushButton("Back")
+        back.setFixedWidth(50)
+        back.pressed.connect(lambda: self.showTableCardWindow(shopName, years, months, days, isCommon))
+
+        toFile = QPushButton("Save to file")
+        toFile.pressed.connect(lambda: self.toFile(currentShopPlot))
+
+        vbox = QVBoxLayout(tab2)
+        vbox.addLayout(hbox)
+        vbox.addWidget(toFile)
+        vbox.addStretch()
+        vbox.addWidget(back)
+
+        tabBar.show()
+
+    def viewShopDiagram(self, stats, dates, labels, shopName, years, months, days, isCommon, numberOfKPI=0):
+        hbox = QHBoxLayout()
+        global currentShopPlot
 
         def drawPlot(numberOfKPI):
-            global currentPlot
+            global currentShopPlot
 
             width = 1 / (len(dates))
             index = np.arange(len(dates))
@@ -529,6 +670,8 @@ class Window(QMainWindow):
                 xs.append(stats[i][numberOfKPI])
 
             bar(index, xs, width=width, zorder=2)
+
+            print(index, dates)
 
             xticks(index, dates, rotation=30, ha="right")
             ylabel(labels[numberOfKPI])
@@ -547,7 +690,7 @@ class Window(QMainWindow):
             imshow(im)
             buf.close()
 
-            currentPlot = im
+            currentShopPlot = im
 
             pic1 = QLabel()
             pic1.setGeometry(0, 0, 640, 480)
@@ -585,7 +728,7 @@ class Window(QMainWindow):
         back.pressed.connect(lambda: self.showTableShopWindow(shopName, years, months, days, isCommon))
 
         toFile = QPushButton("Save to file")
-        toFile.pressed.connect(lambda: self.toFile(currentPlot))
+        toFile.pressed.connect(lambda: self.toFile(currentShopPlot))
 
         vbox = QVBoxLayout(tab1)
         vbox.addLayout(hbox)
@@ -614,7 +757,7 @@ class Window(QMainWindow):
             if ok:
                 plot.save(path + '/' + text + ".png")
 
-    def toExcel(self, stats, dates, labels):
+    def toExcelShop(self, stats, dates, labels):
         path = QFileDialog().getExistingDirectory(self, 'Choose a directory')
 
         if path:
