@@ -574,87 +574,53 @@ class Window(QMainWindow):
         tabBar.show()
 
     def viewCardDiagram(self, stats, dates, labels, shopName, years, months, days, isCommon, indexOfParameter=0):
-        # TODO весь график не влезает в размер
         hbox = QHBoxLayout()
         global currentCardPlot
 
         def drawPlot(indexOfParameter):
             global currentCardPlot
 
-            if indexOfParameter == 0 or indexOfParameter == 2:
-                width = 1 / (len(dates))
-                index = np.arange(len(dates))
-                xs = []
-                for i in range(len(dates)):
-                    xs.append(stats[i][indexOfParameter])
+            width = 1 / (len(dates))
+            index = np.arange(len(dates))
+            xs = []
+            for i in range(len(dates)):
+                xs.append(stats[i][indexOfParameter])
 
+            if indexOfParameter == 0 or indexOfParameter == 2:
                 bar(index, xs, width=width, zorder=2)
 
-                xticks(index, dates, rotation=30, ha="right")
-                ylabel(labels[indexOfParameter])
-                tight_layout()
-                grid(axis='y')
-
-                buf = io.BytesIO()
-
-                gcf().set_size_inches(10.0, 6.4)
-
-                savefig(buf, format='png', dpi=100)
-                buf.seek(0)
-
-                im = Image.open(buf)
-
-                imshow(im)
-                buf.close()
-
-                currentCardPlot = im
-
-                pic1 = QLabel()
-                pic1.setGeometry(0, 0, 640, 480)
-
-                pic1.setPixmap(QPixmap.fromImage(ImageQt(im)))
-
-                clf()
-                return pic1
-
             elif indexOfParameter == 1 or indexOfParameter == 3:
-                width = 1 / (len(dates))
-                index = np.arange(len(dates))
-                xs = []
-                for i in range(len(dates)):
-                    xs.append(stats[i][indexOfParameter])
-
                 bar(index, [0.8, 0.8, 0.8, 0.8], width=width, zorder=2)
                 bar(index, xs, width=width, zorder=2)
 
-                legend(["All", "Cards"])
+                legend(["All", "Cards"], loc="upper left")
 
-                xticks(index, dates, rotation=30, ha="right")
-                ylabel(labels[indexOfParameter])
-                tight_layout()
-                grid(axis='y')
+            xticks(index, dates, rotation=30, ha="right")
+            ylabel(labels[indexOfParameter])
+            tight_layout()
+            grid(axis='y')
 
-                buf = io.BytesIO()
+            buf = io.BytesIO()
 
-                gcf().set_size_inches(10.0, 6.4)
+            gcf().set_size_inches(8.0, 6.4)
 
-                savefig(buf, format='png', dpi=100)
-                buf.seek(0)
+            savefig(buf, format='png', dpi=100)
+            buf.seek(0)
 
-                im = Image.open(buf)
+            im = Image.open(buf)
 
-                imshow(im)
-                buf.close()
+            imshow(im)
+            buf.close()
 
-                currentCardPlot = im
+            currentCardPlot = im
 
-                pic1 = QLabel()
-                pic1.setGeometry(0, 0, 640, 480)
+            pic1 = QLabel()
+            pic1.setGeometry(0, 0, 640, 480)
 
-                pic1.setPixmap(QPixmap.fromImage(ImageQt(im)))
+            pic1.setPixmap(QPixmap.fromImage(ImageQt(im)))
 
-                clf()
-                return pic1
+            clf()
+            return pic1
 
         tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
