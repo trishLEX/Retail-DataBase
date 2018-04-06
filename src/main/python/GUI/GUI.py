@@ -325,6 +325,7 @@ class Window(QMainWindow):
         diagram.pressed.connect(lambda: self.viewCardDiagram(stats, dates, labels, shopName, years, months, weeks, isCommon))
 
         vbox = QVBoxLayout(tab2)
+        vbox.addWidget(QLabel(shopName))
         vbox.addWidget(table)
         vbox.addWidget(diagram)
         vbox.addWidget(toExcel)
@@ -332,8 +333,6 @@ class Window(QMainWindow):
         vbox.addWidget(back)
 
         tabBar.show()
-
-        # TODO сделать таблицу
 
     def showTableShopWindow(self, shopName, years, months, weeks, isCommon):
         print(shopName)
