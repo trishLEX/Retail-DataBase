@@ -202,7 +202,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   private def dumpYear(connection: Connection, statement: Statement, shopCode: Int, year: Int, cards: List[Int]) = {
     val statsOfYear = getShopStats(connection, statement, shopCode, "Year").parseJson.convertTo[Stats].countStats()
 
-    var insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Years (year, shopcode, stats) VALUES (?, ?, ?);")
+    var insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Years (year, shopcode, stats) VALUES (?, ?, ?::jsonb);")
     insertStmt.setInt(1, year)
     insertStmt.setInt(2, shopCode)
     insertStmt.setString(3, statsOfYear.toJson.toString())
