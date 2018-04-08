@@ -77,7 +77,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       if (date == "WEEK")
         dumpWeek (connection, stmt, shopCode, year, Calendar.getInstance().get(Calendar.WEEK_OF_YEAR), cards)
       else if (date == "MONTH")
-        dumpMonth(connection, stmt, shopCode, year, Calendar.getInstance().get(Calendar.MONTH), cards)
+        dumpMonth(connection, stmt, shopCode, year, Calendar.getInstance().get(Calendar.MONTH) + 1, cards)
       else if (date == "YEAR")
         dumpYear (connection, stmt, shopCode, year, cards)
 
