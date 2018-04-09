@@ -1,3 +1,3 @@
 package ru.bmstu.RetailDB.ShopServer
 
-case class CardStats(cardID: Int, totalCost: Float, statMap: Map[String, Map[String, Int]])
+case class CardStats(cardID: Int, totalCost: Float, statMap: Map[String, Map[String, Int]], checkCount: Int = 1)

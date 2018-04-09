@@ -19,7 +19,7 @@ import scalaz.Scalaz._
 class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   implicit val jsonStats = jsonFormat12(Stats)
   implicit val jsonShopStats = jsonFormat2(ShopStats)
-  implicit val jsonCardsStats = jsonFormat3(CardStats)
+  implicit val jsonCardsStats = jsonFormat4(CardStats)
   implicit val executionContext = context.system.dispatcher
   val lock: Lock = new ReentrantLock()
 

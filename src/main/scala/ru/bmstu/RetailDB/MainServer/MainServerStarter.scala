@@ -18,7 +18,7 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
 
     implicit val jsonStats = jsonFormat12(Stats.apply)
     implicit val jsonShopStats = jsonFormat2(ShopStats)
-    implicit val jsonCardsStats = jsonFormat3(Card)
+    implicit val jsonCardsStats = jsonFormat4(Card)
 
     val serverActor = system.actorOf(Props[ServerActor], "serverActor")
     val dumpActor = system.actorOf(Props[DumpActor], "dumpActor")

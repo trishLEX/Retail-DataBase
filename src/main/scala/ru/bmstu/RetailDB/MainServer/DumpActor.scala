@@ -24,7 +24,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 //  yearScheduler.schedule("yearScheduler", self, "YEAR CARD")
 
   implicit val jsonStats = jsonFormat12(Stats.apply)
-  implicit val jsonCardsStatMap = jsonFormat2(CardStatsMap.apply)
+  implicit val jsonCardsStatMap = jsonFormat3(CardStatsMap.apply)
 
   override def receive: Receive = {
     case ("WEEK",  shopcode: Int, cards: List[Int]) => dump("WEEK",  shopcode, cards)

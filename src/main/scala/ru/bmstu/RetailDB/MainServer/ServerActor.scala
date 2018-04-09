@@ -11,8 +11,8 @@ import spray.json._
 class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
   implicit val jsonStats = jsonFormat12(Stats.apply)
   implicit val jsonShopStats = jsonFormat2(ShopStats)
-  implicit val jsonCard = jsonFormat3(Card)
-  implicit val jsonCardStatsMap = jsonFormat2(CardStatsMap.apply)
+  implicit val jsonCard = jsonFormat4(Card)
+  implicit val jsonCardStatsMap = jsonFormat3(CardStatsMap.apply)
   implicit val jsonCardStats = jsonFormat2(CardStats)
 
   private val connectionString = "jdbc:postgresql://localhost:5432/maindb?user=postgres&password=0212"
@@ -175,6 +175,7 @@ class ServerActor extends Actor with SprayJsonSupport with DefaultJsonProtocol{
         var stmt = connection.prepareStatement("SELECT stats->'statsOfWeek' s FROM MainDB.shopschema.Card WHERE cardID = ?")
         stmt.setInt(1, storedCardID)
         var res = stmt.executeQuery()
+        res.next()
         val newStatsOfWeek  = res.getString("s").parseJson.convertTo[CardStatsMap] + insertedStats.statMap
 
         stmt = connection.prepareStatement("SELECT stats->'statsOfMonth' s FROM MainDB.shopschema.Card WHERE cardID = ?")
