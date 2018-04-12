@@ -10,6 +10,58 @@ CREATE TYPE MainDB.shopschema.SEX AS ENUM
   'Woman'
 );
 
+CREATE OR REPLACE FUNCTION cast_sex_to_varchar(sex) RETURNS VARCHAR AS $$
+begin
+  IF $1 = 'Man' THEN
+    RETURN 'Man';
+  ELSE
+    RETURN 'Woman';
+  end if;
+end;
+$$ LANGUAGE plpgsql;
+
+CREATE CAST (MainDB.shopschema.SEX AS VARCHAR)
+WITH FUNCTION cast_sex_to_varchar(sex);
+
+CREATE TYPE Maindb.shopschema.COLOR AS ENUM
+(
+  'Black',
+  'DarkBlue',
+  'DarkGreen',
+  'DarkCyan',
+  'DarkRed',
+  'DarkMagenta',
+  'DarkYellow',
+  'Gray',
+  'DarkGray',
+  'Blue',
+  'Green',
+  'Cyan',
+  'Red',
+  'Magenta',
+  'Yellow',
+  'White'
+);
+
+CREATE TYPE Maindb.shopschema.ITEM_TYPE AS ENUM
+(
+  'Jeans',
+  'T-shirt',
+  'Shirt',
+  'Boots',
+  'Accessory',
+  'Pants'
+);
+
+CREATE TYPE Maindb.shopschema.MODEL AS ENUM
+(
+  '501',
+  '502',
+  '505',
+  '511',
+  '512'
+);
+
 
 CREATE SEQUENCE IF NOT EXISTS MainDB.shopschema.shop_codes
   AS INT
@@ -57,7 +109,7 @@ CREATE TABLE IF NOT EXISTS MainDB.shopschema.Shops_Stats_Months
   shopCode INT NOT NULL,
   stats JSONB NOT NULL DEFAULT '{}',
 
-  FOREIGN KEY (year, shopCode) REFERENCES MainDB.shopschema.Shops_Stats_Years (year, shopCode),
+  FOREIGN KEY (shopCode) REFERENCES MainDB.shopschema.Shops (shopCode),
   PRIMARY KEY (shopCode, year, month)
 );
 
@@ -68,7 +120,7 @@ CREATE TABLE IF NOT EXISTS MainDB.shopschema.Shops_Stats_Weeks
   shopCode INT NOT NULL,
   stats JSONB NOT NULL DEFAULT '{}',
 
-  FOREIGN KEY (year, shopCode) REFERENCES MainDB.shopschema.Shops_Stats_Years (year, shopCode),
+  FOREIGN KEY (shopCode) REFERENCES MainDB.shopschema.Shops (shopCode),
   PRIMARY KEY (shopCode, year, week)
 );
 
@@ -105,6 +157,73 @@ CREATE TABLE IF NOT EXISTS MainDB.shopschema.Card_Stats_Months
   cardID INT NOT NULL,
   stats JSONB NOT NULL DEFAULT '{}',
 
-  FOREIGN KEY (cardID, year) REFERENCES MainDB.shopschema.Card_Stats_Years (cardID, year),
+  FOREIGN KEY (cardID) REFERENCES MainDB.shopschema.Card (cardID),
   PRIMARY KEY (cardID, year, month)
 );
+
+CREATE TABLE IF NOT EXISTS MainDB.shopschema.Card_Stats_Weeks
+(
+  year INT DEFAULT EXTRACT(YEAR FROM current_date) NOT NULL,
+  week INT DEFAULT EXTRACT(WEEK FROM current_date) NOT NULL,
+  cardID INT NOT NULL,
+  stats JSONB NOT NULL DEFAULT '{}',
+
+  FOREIGN KEY (cardID) REFERENCES MainDB.shopschema.Card (cardID),
+  PRIMARY KEY (cardID, year, week)
+);
+
+CREATE TABLE IF NOT EXISTS Maindb.shopschema.ItemType
+(
+  sku INT PRIMARY KEY NOT NULL,
+  itemName VARCHAR(50) NOT NULL,
+  description VARCHAR(100),
+  sex SEX NOT NULL,
+  type item_type NOT NULL,
+  model MODEL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS Maindb.shopschema.Item
+(
+  itemID INT NOT NULL,
+  sku INT NOT NULL ,
+  size SMALLINT NOT NULL ,
+  color COLOR NOT NULL,
+
+  PRIMARY KEY (itemID, sku),
+
+  FOREIGN KEY (sku) REFERENCES MainDB.shopschema.ItemType (sku) ON DELETE CASCADE
+);
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_sku_pairs_frequency_year(shopcode_p INT, years INT[])
+  RETURNS TABLE(item1 VARCHAR, item2 VARCHAR, sex VARCHAR, count BIGINT) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT (MainDB.shopschema.get_name_by_sku(substring(T.key, 2, 3)))[1],
+    (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[1],
+    (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[2], SUM(T.value::TEXT::INT) S FROM
+    (SELECT (jsonb_each((stats->>'skuPairsFreq')::JSONB)).key, (jsonb_each((stats->>'skuPairsFreq')::JSONB)).value
+     FROM MainDB.shopschema.Shops_Stats_Years WHERE years @> (ARRAY[]::INT[] || year) AND shopCode = shopcode_p) AS T GROUP BY T.key
+  ORDER BY S DESC ;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_sku_frequency_year(shopcode_p INT, years INT[])
+  RETURNS TABLE (sex VARCHAR, item VARCHAR, count BIGINT) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT (MainDB.shopschema.get_name_by_sku(T.key))[2], (MainDB.shopschema.get_name_by_sku(T.key))[1], SUM(T.value::TEXT::INT) S FROM
+    (SELECT (jsonb_each((stats->>'skuFreq')::JSONB)).key, (jsonb_each((stats->>'skuFreq')::JSONB)).value
+     FROM MainDB.shopschema.Shops_Stats_Years WHERE years @> (ARRAY[]::INT[] || year) AND shopCode = shopcode_p) AS T GROUP BY T.key
+  ORDER BY S DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_name_by_sku(sku_p VARCHAR) RETURNS VARCHAR[] AS $$
+DECLARE
+  name VARCHAR;
+  sexp VARCHAR;
+BEGIN
+  SELECT itemName, sex INTO name, sexp FROM MainDB.shopschema.ItemType WHERE sku = sku_p::INT;
+  RETURN ARRAY[]::VARCHAR[] || name || sexp;
+END;
+$$ LANGUAGE plpgsql;
