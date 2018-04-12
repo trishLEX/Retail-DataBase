@@ -9,6 +9,7 @@ from PIL.ImageQt import ImageQt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import io
 import numpy as np
+import Controller
 
 
 class Window(QMainWindow):
@@ -19,6 +20,8 @@ class Window(QMainWindow):
 
         self.currentShopTab = None
         self.currentCardTab = None
+
+        self.controller = Controller.Controller()
 
         self.initUi()
 
@@ -103,9 +106,14 @@ class Window(QMainWindow):
         tree.setHeaderLabel("Choose a time period")
 
         parent = QTreeWidgetItem(tree)
+
         parent.setText(0, "Years")
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
         years = [2015, 2016, 2017, 2018]
+        months = [1, 2, 3, 4, 5]
+        weeks = [1, 2, 3]
+        #years, months, weeks = self.controller.getCardTimes() TODO добавить
+
         for year in years:
             child = QTreeWidgetItem(parent)
             child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
@@ -115,7 +123,6 @@ class Window(QMainWindow):
         parent = QTreeWidgetItem(tree)
         parent.setText(0, "Months")
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-        months = [1, 2, 3]
         for month in months:
             child = QTreeWidgetItem(parent)
             child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
@@ -125,7 +132,6 @@ class Window(QMainWindow):
         parent = QTreeWidgetItem(tree)
         parent.setText(0, "Weeks")
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-        weeks = [1, 2, 3]
         for week in weeks:
             child = QTreeWidgetItem(parent)
             child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
@@ -136,7 +142,9 @@ class Window(QMainWindow):
         if isCommon:
             itemList = ["The whole company", "Moscow", "St. Petersburg", "Riga"]
         else:
-            itemList = ["Moscow 1","Moscow 2", "Moscow 3"]
+            #itemList = ["Moscow 1","Moscow 2", "Moscow 3"]
+            itemList = self.controller.getShopNames()
+
         shopList.addItems(itemList)
 
         showTable = QPushButton("Show Table")
@@ -150,10 +158,23 @@ class Window(QMainWindow):
         showTable.setDisabled(True)
 
         def checkDates():
+            def checkOneYear():
+                count = 0
+                for i in range(tree.topLevelItem(0).childCount()):
+                    if tree.topLevelItem(0).child(i).checkState(0) > 0:
+                        count += 1
+
+                if count > 1:
+                    return False
+                elif count == 1:
+                    return True
+                else:
+                    return False
+
             res = True
             res = res and tree.topLevelItem(0).checkState(0) > 0
             res = res and (
-                    (tree.topLevelItem(1).checkState(0) > 0) ^ (tree.topLevelItem(2).checkState(0) > 0)
+                    (((tree.topLevelItem(1).checkState(0) > 0) ^ (tree.topLevelItem(2).checkState(0) > 0)) and (checkOneYear()))
                     or ((tree.topLevelItem(1).checkState(0) == 0) and (tree.topLevelItem(2).checkState(0) == 0)))
 
             return res
@@ -190,6 +211,10 @@ class Window(QMainWindow):
         parent.setText(0, "Years")
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
         years = [2015, 2016, 2017, 2018]
+        months = [1, 2, 3, 4, 5]
+        weeks = [1, 2, 3]
+        #years, months, weeks = self.controller.getShopTimes() TODO добавить
+
         for year in years:
             child = QTreeWidgetItem(parent)
             child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
@@ -199,7 +224,6 @@ class Window(QMainWindow):
         parent = QTreeWidgetItem(tree)
         parent.setText(0, "Months")
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-        months = [1, 2, 3]
         for month in months:
             child = QTreeWidgetItem(parent)
             child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
@@ -209,7 +233,6 @@ class Window(QMainWindow):
         parent = QTreeWidgetItem(tree)
         parent.setText(0, "Weeks")
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-        weeks = [1, 2, 3]
         for week in weeks:
             child = QTreeWidgetItem(parent)
             child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
@@ -220,7 +243,9 @@ class Window(QMainWindow):
         if isCommon:
             itemList = ["The whole company", "Moscow", "St. Petersburg", "Riga"]
         else:
-            itemList = ["Moscow 1","Moscow 2", "Moscow 3"]
+            #itemList = ["Moscow 1","Moscow 2", "Moscow 3"]
+            itemList = self.controller.getShopNames()
+
         shopList.addItems(itemList)
 
         showTable = QPushButton("Show Table")
@@ -234,10 +259,23 @@ class Window(QMainWindow):
         showTable.setDisabled(True)
 
         def checkDates():
+            def checkOneYear():
+                count = 0
+                for i in range(tree.topLevelItem(0).childCount()):
+                    if tree.topLevelItem(0).child(i).checkState(0) > 0:
+                        count += 1
+
+                if count > 1:
+                    return False
+                elif count == 1:
+                    return True
+                else:
+                    return False
+
             res = True
             res = res and tree.topLevelItem(0).checkState(0) > 0
             res = res and (
-                    (tree.topLevelItem(1).checkState(0) > 0) ^ (tree.topLevelItem(2).checkState(0) > 0)
+                    (((tree.topLevelItem(1).checkState(0) > 0) ^ (tree.topLevelItem(2).checkState(0) > 0)) and (checkOneYear()))
                     or ((tree.topLevelItem(1).checkState(0) == 0) and (tree.topLevelItem(2).checkState(0) == 0)))
 
             return res
@@ -254,6 +292,8 @@ class Window(QMainWindow):
         tabBar.show()
 
     def showTableCardWindow(self, shopName, years, months, weeks, isCommon):
+        shopCode = self.controller.getShopCode(shopName)
+
         print(shopName)
         print([year.text(0) for year in years])
         print([month.text(0) for month in months])
@@ -274,9 +314,17 @@ class Window(QMainWindow):
         back.setFixedWidth(50)
         back.pressed.connect(lambda: self.shopChooseCardWindow(isCommon))
 
-        dates = [year.text(0) for year in years]
+        if len(months) != 0 and len(weeks) == 0:
+            dates = [month.text(0) for month in months]
+            stats = self.controller.getCardStats(shopCode, years=[years[0].text(0)], months=dates)
+        elif len(months) == 0 and len(weeks) != 0:
+            dates = [week.text(0) for week in weeks]
+            stats = self.controller.getCardStats(shopCode, years=[years[0].text(0)], weeks=dates)
+        else:
+            dates = [year.text(0) for year in years]
+            stats = self.controller.getCardStats(shopCode, years=dates)
 
-        print(dates)
+        print("DATES:", dates)
 
         table = QTableWidget()
         table.setColumnCount(len(dates))
@@ -284,24 +332,25 @@ class Window(QMainWindow):
         # 1 - Количество чеков по картам, 2 - их % от общего числа чеков, 3 - totalSum по картам, 4 - % от общего totalSum
         table.setRowCount(4)
 
-        stats = [[i + 1 for i in range(4)]]
-        if len(dates) == 2:
-            stats.append([i*i + 1 for i in range(4)])
-        if len(dates) == 3:
-            stats.append([i*i + 1 for i in range(4)])
-            stats.append([i*2 + 1 for i in range(4)])
-        if len(dates) == 4:
-            stats.append([i*i + 1 for i in range(4)])
-            stats.append([i*2 + 1 for i in range(4)])
-            stats.append([i*3 + 1 for i in range(4)])
+        # stats = [[i + 1 for i in range(4)]]
+        # if len(dates) == 2:
+        #     stats.append([i*i + 1 for i in range(4)])
+        # if len(dates) == 3:
+        #     stats.append([i*i + 1 for i in range(4)])
+        #     stats.append([i*2 + 1 for i in range(4)])
+        # if len(dates) == 4:
+        #     stats.append([i*i + 1 for i in range(4)])
+        #     stats.append([i*2 + 1 for i in range(4)])
+        #     stats.append([i*3 + 1 for i in range(4)])
+        #
+        # for i in stats:
+        #     i[1] = i[1] / 15
+        #     i[3] = i[3] / 15
 
-        for i in stats:
-            i[1] = i[1] / 15
-            i[3] = i[3] / 15
-
-        # TODO переименовать лэйблы
-        labels = ["A number of checks with cards", "Relation of a number of checks with cards to a whole number",
-                  "Total sum in checks with cards", "Relation of a total sum in checks to a whole sum"]
+        labels = ["A number of checks with cards",
+                  "The ratio of the number of checks with cards to the number of all checks",
+                  "Total sum in checks with cards",
+                  "The ratio of the total sum in checks with cards to the whole sum"]
 
         table.setHorizontalHeaderLabels(dates)
         table.setVerticalHeaderLabels(labels)
@@ -310,8 +359,11 @@ class Window(QMainWindow):
         header.setLineWidth(1)
         table.setHorizontalHeader(header)
 
+        print("STATS:", stats)
+
         for i in range(len(dates)):
             for j in range(4):
+                print(stats[i][j])
                 table.setItem(j, i, QTableWidgetItem(str(stats[i][j])))
 
         table.resizeColumnsToContents()
@@ -335,6 +387,8 @@ class Window(QMainWindow):
         tabBar.show()
 
     def showTableShopWindow(self, shopName, years, months, weeks, isCommon):
+        shopCode = self.controller.getShopCode(shopName)
+
         print(shopName)
         print([year.text(0) for year in years])
         print([month.text(0) for month in months])
@@ -353,24 +407,32 @@ class Window(QMainWindow):
         back.setFixedWidth(50)
         back.pressed.connect(lambda: self.shopChooseShopWindow(isCommon))
 
-        dates = [year.text(0) for year in years]  # это для тестирования
+        if len(months) != 0 and len(weeks) == 0:
+            dates = [month.text(0) for month in months]
+            stats = self.controller.getShopStats(shopCode, years=[years[0].text(0)], months=dates)
+        elif len(months) == 0 and len(weeks) != 0:
+            dates = [week.text(0) for week in weeks]
+            stats = self.controller.getShopStats(shopCode, years=[years[0].text(0)], weeks=dates)
+        else:
+            dates = [year.text(0) for year in years]
+            stats = self.controller.getShopStats(shopCode, years=dates)
 
-        print(dates)
+        print("DATES", dates)
 
         table = QTableWidget()
         table.setColumnCount(10)
         table.setRowCount(len(dates))
 
-        stats = [[i for i in range(10)]]
-        if len(dates) == 2:
-            stats.append([i*i for i in range(10)])
-        if len(dates) == 3:
-            stats.append([i*i for i in range(10)])
-            stats.append([i*2 for i in range(10)])
-        if len(dates) == 4:
-            stats.append([i*i for i in range(10)])
-            stats.append([i*2 for i in range(10)])
-            stats.append([i*3 for i in range(10)])
+        # stats = [[i for i in range(10)]]
+        # if len(dates) == 2:
+        #     stats.append([i*i for i in range(10)])
+        # if len(dates) == 3:
+        #     stats.append([i*i for i in range(10)])
+        #     stats.append([i*2 for i in range(10)])
+        # if len(dates) == 4:
+        #     stats.append([i*i for i in range(10)])
+        #     stats.append([i*2 for i in range(10)])
+        #     stats.append([i*3 for i in range(10)])
 
         # TODO сделать в порядке как в файле KPI
         labels = ["Conversion", "Units per transaction",
@@ -383,9 +445,13 @@ class Window(QMainWindow):
         header.setLineWidth(1)
         table.setHorizontalHeader(header)
 
+        print("STATS:", stats)
+
         for i in range(len(dates)):
             for j in range(10):
                 table.setItem(i, j, QTableWidgetItem(str(stats[i][j])))
+
+        print("A")
 
         table.resizeColumnsToContents()
         table.resizeRowsToContents()
@@ -399,8 +465,31 @@ class Window(QMainWindow):
             lambda: self.viewShopDiagram(stats, dates, labels, shopName, years, months, weeks, isCommon))
 
         itemPairsLabels = ["First Item", "Second Item", "Frequency"]
+        ItemLabels = ["Item", "Count"]
 
-        manFreqPairsList = [["manItem1", "manItem2", 1], ["manItem1", "manItem3", 3],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1]]
+        # manFreqPairsList = [["manItem1", "manItem2", 1], ["manItem1", "manItem3", 3],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1]]
+        # manItemList = [["manItem1", 1], ["manItem2", 2], ["manItem3", 3]]
+        #
+        # womanItemList = [["womanItem1", 1], ["womanItem2", 2], ["womanItem3", 3]]
+        # womanFreqPairsList = [["womanItem1", "womanItem2", 2], ["womanItem1", "womanItem3", 4]]
+
+        manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = self.controller.getShopFreqStats(shopCode, years, months, weeks)
+        print("FREQ:",  manFreqPairsList, manItemList, womanFreqPairsList, womanItemList)
+
+        if len(months) != 0 and len(weeks) == 0:
+            #dates = [month.text(0) for month in months]
+            manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
+                self.controller.getShopFreqStats(shopCode, years=[years[0].text(0)], months=dates)
+        elif len(months) == 0 and len(weeks) != 0:
+            #dates = [month.text(0) for month in months]
+            manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
+                self.controller.getShopFreqStats(shopCode, years=[years[0].text(0)], weeks=dates)
+        else:
+            #dates = [month.text(0) for month in months]
+            manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
+                self.controller.getShopFreqStats(shopCode, years=dates)
+
+
         manFreqPairsTable = QTableWidget()
         manFreqPairsTable.setRowCount(len(manFreqPairsList)) #TODO брать первые 5 пар или все, но в пределах разумного
         manFreqPairsTable.setColumnCount(3)
@@ -412,27 +501,22 @@ class Window(QMainWindow):
         # manFreqPairsTable.resizeColumnsToContents()
         # manFreqPairsTable.resizeRowsToContents()
 
-        manItemLabels = ["Item", "Count"]
-        manItemList = [["manItem1", 1], ["manItem2", 2], ["manItem3", 3]]
         manItemTable = QTableWidget()
         manItemTable.setRowCount(len(manItemList))
         manItemTable.setColumnCount(2)
-        manItemTable.setHorizontalHeaderLabels(manItemLabels)
+        manItemTable.setHorizontalHeaderLabels(ItemLabels)
         for i in range(len(manItemList)):
             for j in range(2):
                 manItemTable.setItem(i, j, QTableWidgetItem(str(manItemList[i][j])))
 
-        womanItemLabels = ["Item", "Count"]
-        womanItemList = [["womanItem1", 1], ["womanItem2", 2], ["womanItem3", 3]]
         womanItemTable = QTableWidget()
         womanItemTable.setRowCount(len(womanItemList))
         womanItemTable.setColumnCount(2)
-        womanItemTable.setHorizontalHeaderLabels(womanItemLabels)
+        womanItemTable.setHorizontalHeaderLabels(ItemLabels)
         for i in range(len(womanItemList)):
             for j in range(2):
                 womanItemTable.setItem(i, j, QTableWidgetItem(str(womanItemList[i][j])))
 
-        womanFreqPairsList = [["womanItem1", "womanItem2", 2], ["womanItem1", "womanItem3", 4]]
         womanFreqPairsTable = QTableWidget()
         womanFreqPairsTable.setRowCount(len(womanFreqPairsList)) #TODO брать первые 5 пар
         womanFreqPairsTable.setColumnCount(3)
@@ -589,7 +673,7 @@ class Window(QMainWindow):
                 bar(index, xs, width=width, zorder=2)
 
             elif indexOfParameter == 1 or indexOfParameter == 3:
-                bar(index, [0.8, 0.8, 0.8, 0.8], width=width, zorder=2)
+                bar(index, [1 for i in range(len(dates))], width=width, zorder=2)
                 bar(index, xs, width=width, zorder=2)
 
                 legend(["All", "Cards"], loc="upper left")
