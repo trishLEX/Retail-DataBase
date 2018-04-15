@@ -1,7 +1,4 @@
-import postgresql as pg
 from pg import DB
-from ast import literal_eval as make_tuple
-import json
 
 class Controller:
     @staticmethod
@@ -16,6 +13,15 @@ class Controller:
         with DB(dbname='maindb', host='localhost', port=5432, user='postgres', passwd='0212') as db:
             list = db.query('SELECT shopName FROM maindb.shopschema.shops').getresult()
             return [i[0] for i in list]
+
+    @staticmethod
+    def getCities():
+        with DB(dbname='maindb', host='localhost', port=5432, user='postgres', passwd='0212') as db:
+            list = ['The whole company']
+            cities = [i[0] for i in db.query('SELECT DISTINCT city FROM MainDB.shopschema.shops').getresult()]
+            for city in cities:
+                list.append(city)
+            return list
 
     @staticmethod
     def getShopTimes():
@@ -147,28 +153,35 @@ class Controller:
         shopStats = []
         with DB(dbname='maindb', host='localhost', port=5432, user='postgres', passwd='0212') as db:
             if months is None and weeks is None:
-                shopStats = db.query("SELECT stats->>'CR', stats->>'UPT', stats->>'avgCheck', stats->>'salesPerArea',"
-                                     "stats->>'countOfChecks', stats->>'returnedUnits', stats->>'countOfVisitors', "
-                                     "stats->>'proceedsWithoutTax', stats->>'proceedsWithTax', stats->>'countOfSoldUnits'"
+                shopStats = db.query("SELECT (stats->>'CR')::FLOAT, (stats->>'UPT')::FLOAT, (stats->>'avgCheck')::FLOAT, "
+                                     "(stats->>'salesPerArea')::FLOAT, (stats->>'countOfChecks')::INT, "
+                                     "(stats->>'returnedUnits')::INT, (stats->>'countOfVisitors')::INT, "
+                                     "(stats->>'proceedsWithoutTax')::FLOAT, (stats->>'proceedsWithTax')::FLOAT, "
+                                     "(stats->>'countOfSoldUnits')::INT "
                                      "FROM MainDB.shopschema.Shops_Stats_Years WHERE year IN ($1) AND shopCode = {0}"
                                      .format(str(shopCode)), years).getresult()
 
             elif months is not None and weeks is None:
-                shopStats = db.query("SELECT stats->>'CR', stats->>'UPT', stats->>'avgCheck', stats->>'salesPerArea',"
-                                     "stats->>'countOfChecks', stats->>'returnedUnits', stats->>'countOfVisitors', "
-                                     "stats->>'proceedsWithoutTax', stats->>'proceedsWithTax', stats->>'countOfSoldUnits'"
+                shopStats = db.query("SELECT (stats->>'CR')::FLOAT, (stats->>'UPT')::FLOAT, (stats->>'avgCheck')::FLOAT, "
+                                     "(stats->>'salesPerArea')::FLOAT, (stats->>'countOfChecks')::INT, "
+                                     "(stats->>'returnedUnits')::INT, (stats->>'countOfVisitors')::INT, "
+                                     "(stats->>'proceedsWithoutTax')::FLOAT, (stats->>'proceedsWithTax')::FLOAT, "
+                                     "(stats->>'countOfSoldUnits')::INT "
                                      "FROM MainDB.shopschema.Shops_Stats_Months WHERE year = $1 AND month IN ({0}) AND shopCode = {1}"
                                      .format(str(months).replace('[', '').replace(']', ''), str(shopCode)), years[0]).getresult()
 
             elif months is None and weeks is not None:
-                shopStats = db.query("SELECT stats->>'CR', stats->>'UPT', stats->>'avgCheck', stats->>'salesPerArea',"
-                                     "stats->>'countOfChecks', stats->>'returnedUnits', stats->>'countOfVisitors', "
-                                     "stats->>'proceedsWithoutTax', stats->>'proceedsWithTax', stats->>'countOfSoldUnits'"
+                shopStats = db.query("SELECT (stats->>'CR')::FLOAT, (stats->>'UPT')::FLOAT, (stats->>'avgCheck')::FLOAT, "
+                                     "(stats->>'salesPerArea')::FLOAT, (stats->>'countOfChecks')::INT, "
+                                     "(stats->>'returnedUnits')::INT, (stats->>'countOfVisitors')::INT, "
+                                     "(stats->>'proceedsWithoutTax')::FLOAT, (stats->>'proceedsWithTax')::FLOAT, "
+                                     "(stats->>'countOfSoldUnits')::INT "
                                      "FROM MainDB.shopschema.Shops_Stats_Weeks WHERE year = $1 AND week IN ({0}) AND shopCode = {1}"
                                      .format(str(weeks).replace('[', '').replace(']', ''), str(shopCode)), years[0]).getresult()
             else:
                 raise RuntimeError("Error time period")
 
+        print(shopStats)
         return shopStats
 
     @staticmethod
@@ -198,27 +211,55 @@ class Controller:
                     else:
                         freqWomanStats.append((i[0][1], i[0][2]))
 
-                print(res)
-                print(pairManStats)
-                print(pairWomanStats)
+                # print(res)
+                # print(pairManStats)
+                # print(pairWomanStats)
+
+            elif months is not None and weeks is None:
+                res = db.query("SELECT MainDB.shopschema.get_sku_pairs_frequency_month({0}, '{{{1}}}'::INT[], '{{{2}}}')"
+                               .format(str(shopCode),
+                                       str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                       str(months).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+
+                for i in res:
+                    if i[0][2] == 'Man':
+                        pairManStats.append((i[0][0], i[0][1], i[0][3]))
+                    else:
+                        pairWomanStats.append((i[0][0], i[0][1], i[0][3]))
+
+                res = db.query("SELECT MainDB.shopschema.get_sku_frequency_month({0}, '{{{1}}}'::INT[], '{{{2}}}')"
+                               .format(str(shopCode),
+                                       str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                       str(months).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+
+                for i in res:
+                    if i[0][0] == 'Man':
+                        freqManStats.append((i[0][1], i[0][2]))
+                    else:
+                        freqWomanStats.append((i[0][1], i[0][2]))
+
+            elif months is None and weeks is not None:
+                res = db.query(
+                    "SELECT MainDB.shopschema.get_sku_pairs_frequency_week({0}, '{{{1}}}'::INT[], '{{{2}}}')"
+                        .format(str(shopCode),
+                                str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                str(weeks).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+
+                for i in res:
+                    if i[0][2] == 'Man':
+                        pairManStats.append((i[0][0], i[0][1], i[0][3]))
+                    else:
+                        pairWomanStats.append((i[0][0], i[0][1], i[0][3]))
+
+                res = db.query("SELECT MainDB.shopschema.get_sku_frequency_week({0}, '{{{1}}}'::INT[], '{{{2}}}')"
+                               .format(str(shopCode),
+                                       str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                       str(weeks).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+
+                for i in res:
+                    if i[0][0] == 'Man':
+                        freqManStats.append((i[0][1], i[0][2]))
+                    else:
+                        freqWomanStats.append((i[0][1], i[0][2]))
 
         return pairManStats, freqManStats, pairWomanStats, freqWomanStats
-
-
-
-if __name__ == '__main__':
-    ctrl = Controller()
-    print(ctrl.getShopCode("Moscow 1"))
-    #print(ctrl.getShopNames())
-    #print(ctrl.getShopTimes())
-    month = ['4', '5']
-    # print("hi ({0})".format(str(month).replace('[', '').replace(']', '')))
-
-    #print(ctrl.getCardStats(100, [2018], [4, 5]))
-    #print(ctrl.getShopStats(100, [2018], [4, 5]))
-
-    print(ctrl.getShopFreqStats(100, ['2018']))
-
-    #print([json.loads(i) for i in ctrl.getCardStats([2018])])
-    # for i in shops:
-    #     print(i["shopName"])

@@ -588,7 +588,8 @@ class Window(QMainWindow):
         tabBar.show()
 
     def viewCountFreqDiagram(self, stats, elements, shopName, years, months, days, isCommon, yLabel):
-        print(stats, elements)
+        print("DIAGRAM:", stats, elements)
+        stats = [int(i) for i in stats]
 
         global currentShopPlot
 
@@ -746,6 +747,7 @@ class Window(QMainWindow):
         tabBar.show()
 
     def viewShopDiagram(self, stats, dates, labels, shopName, years, months, days, isCommon, numberOfKPI=0):
+        print("DIAGRAM:", stats)
         hbox = QHBoxLayout()
         global currentShopPlot
 
