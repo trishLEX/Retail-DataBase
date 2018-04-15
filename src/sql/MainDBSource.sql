@@ -287,3 +287,97 @@ BEGIN
   RETURN ARRAY[]::VARCHAR[] || name || sexp;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_city_shop_stats_year(years INT[], city_p INT DEFAULT 0)
+  RETURNS TABLE (CR FLOAT, UPT FLOAT, avgCheck FLOAT, salesPerArea FLOAT, countOfChecks BIGINT, returnedUnits BIGINT,
+                 countOfVisitors BIGINT, proceedsWithTax FLOAT, proceedsWithoutTax FLOAT, countOfSoldUnits BIGINT) AS $$
+BEGIN
+  IF city_p != 0 THEN
+    RETURN QUERY
+    SELECT (SUM((stats->>'countOfChecks')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'countOfSoldUnits')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'proceedsWithTax')::FLOAT) / SUM((stats->>'countOfChecks')::INT)),
+      SUM((stats->>'salesPerArea')::FLOAT), SUM((stats->>'countOfChecks')::INT),
+      SUM((stats->>'returnedUnits')::INT), SUM((stats->>'countOfVisitors')::INT),
+      SUM((stats->>'proceedsWithoutTax')::FLOAT), SUM((stats->>'proceedsWithTax')::FLOAT),
+      SUM((stats->>'countOfSoldUnits')::INT)
+    FROM MainDB.shopschema.Shops_Stats_Years WHERE years @> (ARRAY[]::INT[] || year) AND shopcode / 100 = city_p;
+  ELSE
+    RETURN QUERY
+    SELECT (SUM((stats->>'countOfChecks')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'countOfSoldUnits')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'proceedsWithTax')::FLOAT) / SUM((stats->>'countOfChecks')::INT)),
+      SUM((stats->>'salesPerArea')::FLOAT), SUM((stats->>'countOfChecks')::INT),
+      SUM((stats->>'returnedUnits')::INT), SUM((stats->>'countOfVisitors')::INT),
+      SUM((stats->>'proceedsWithoutTax')::FLOAT), SUM((stats->>'proceedsWithTax')::FLOAT),
+      SUM((stats->>'countOfSoldUnits')::INT)
+    FROM MainDB.shopschema.Shops_Stats_Years WHERE years @> (ARRAY[]::INT[] || year);
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_city_shop_stats_month(years INT, months INT[], city_p INT DEFAULT 0)
+  RETURNS TABLE (CR FLOAT, UPT FLOAT, avgCheck FLOAT, salesPerArea FLOAT, countOfChecks BIGINT, returnedUnits BIGINT,
+                 countOfVisitors BIGINT, proceedsWithTax FLOAT, proceedsWithoutTax FLOAT, countOfSoldUnits BIGINT) AS $$
+BEGIN
+  IF city_p != 0 THEN
+    RETURN QUERY
+    SELECT (SUM((stats->>'countOfChecks')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'countOfSoldUnits')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'proceedsWithTax')::FLOAT) / SUM((stats->>'countOfChecks')::INT)),
+      SUM((stats->>'salesPerArea')::FLOAT), SUM((stats->>'countOfChecks')::INT),
+      SUM((stats->>'returnedUnits')::INT), SUM((stats->>'countOfVisitors')::INT),
+      SUM((stats->>'proceedsWithoutTax')::FLOAT), SUM((stats->>'proceedsWithTax')::FLOAT),
+      SUM((stats->>'countOfSoldUnits')::INT)
+    FROM MainDB.shopschema.Shops_Stats_Months WHERE
+      years = year
+      AND months @> (ARRAY[]::INT[] || month)
+      AND shopcode / 100 = city_p;
+  ELSE
+    RETURN QUERY
+    SELECT (SUM((stats->>'countOfChecks')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'countOfSoldUnits')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'proceedsWithTax')::FLOAT) / SUM((stats->>'countOfChecks')::INT)),
+      SUM((stats->>'salesPerArea')::FLOAT), SUM((stats->>'countOfChecks')::INT),
+      SUM((stats->>'returnedUnits')::INT), SUM((stats->>'countOfVisitors')::INT),
+      SUM((stats->>'proceedsWithoutTax')::FLOAT), SUM((stats->>'proceedsWithTax')::FLOAT),
+      SUM((stats->>'countOfSoldUnits')::INT)
+    FROM MainDB.shopschema.Shops_Stats_Months WHERE
+      years = year
+      AND months @> (ARRAY[]::INT[] || month);
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_city_shop_stats_week(years INT, weeks INT[], city_p INT DEFAULT 0)
+  RETURNS TABLE (CR FLOAT, UPT FLOAT, avgCheck FLOAT, salesPerArea FLOAT, countOfChecks BIGINT, returnedUnits BIGINT,
+                 countOfVisitors BIGINT, proceedsWithTax FLOAT, proceedsWithoutTax FLOAT, countOfSoldUnits BIGINT) AS $$
+BEGIN
+  IF city_p != 0 THEN
+    RETURN QUERY
+    SELECT (SUM((stats->>'countOfChecks')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'countOfSoldUnits')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'proceedsWithTax')::FLOAT) / SUM((stats->>'countOfChecks')::INT)),
+      SUM((stats->>'salesPerArea')::FLOAT), SUM((stats->>'countOfChecks')::INT),
+      SUM((stats->>'returnedUnits')::INT), SUM((stats->>'countOfVisitors')::INT),
+      SUM((stats->>'proceedsWithoutTax')::FLOAT), SUM((stats->>'proceedsWithTax')::FLOAT),
+      SUM((stats->>'countOfSoldUnits')::INT)
+    FROM MainDB.shopschema.Shops_Stats_Weeks WHERE
+      years = year
+      AND weeks @> (ARRAY[]::INT[] || week)
+      AND shopcode / 100 = city_p;
+  ELSE
+    RETURN QUERY
+    SELECT (SUM((stats->>'countOfChecks')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'countOfSoldUnits')::FLOAT) / SUM((stats->>'countOfVisitors')::INT)),
+      (SUM((stats->>'proceedsWithTax')::FLOAT) / SUM((stats->>'countOfChecks')::INT)),
+      SUM((stats->>'salesPerArea')::FLOAT), SUM((stats->>'countOfChecks')::INT),
+      SUM((stats->>'returnedUnits')::INT), SUM((stats->>'countOfVisitors')::INT),
+      SUM((stats->>'proceedsWithoutTax')::FLOAT), SUM((stats->>'proceedsWithTax')::FLOAT),
+      SUM((stats->>'countOfSoldUnits')::INT)
+    FROM MainDB.shopschema.Shops_Stats_Weeks WHERE
+      years = year
+      AND weeks @> (ARRAY[]::INT[] || week);
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
