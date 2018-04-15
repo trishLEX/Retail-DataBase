@@ -1,5 +1,6 @@
 from pg import DB
 
+
 class Controller:
     @staticmethod
     def getShopCode(shopName):
@@ -7,6 +8,11 @@ class Controller:
             shopCode = db.query('SELECT shopCode FROM MainDB.shopschema.shops WHERE shopName = $1', shopName).getresult()
             return shopCode[0][0]
 
+    @staticmethod
+    def getCityCode(city):
+        with DB(dbname='maindb', host='localhost', port=5432, user='postgres', passwd='0212') as db:
+            code = db.query("SELECT shopCode / 100 FROM MainDB.shopschema.shops WHERE city = $1 LIMIT 1", city).getresult()
+            return code[0][0]
 
     @staticmethod
     def getShopNames():
@@ -181,8 +187,61 @@ class Controller:
             else:
                 raise RuntimeError("Error time period")
 
-        print(shopStats)
+        print("CNTRL:", shopStats)
         return shopStats
+
+    @staticmethod
+    def getCommonShopStats(years, months=None, weeks=None, city=None):
+        stats = []
+        with DB(dbname='maindb', host='localhost', port=5432, user='postgres', passwd='0212') as db:
+            if city is None:
+                if months is None and weeks is None:
+                    res = db.query("SELECT MainDB.shopschema.get_city_shop_stats_year('{{{0}}}'::INT[])"
+                                   .format(str(years).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+
+                    for i in res:
+                        stats.append(i[0])
+
+                elif months is not None and weeks is None:
+                    res = db.query("SELECT MainDB.shopschema.get_city_shop_stats_month({0}, '{{{1}}}'::INT[])"
+                                   .format(str(years[0]),
+                                           str(months).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+                    for i in res:
+                        stats.append(i[0])
+
+                elif months is None and weeks is not None:
+                    res = db.query("SELECT MainDB.shopschema.get_city_shop_stats_week({0}, '{{{1}}}'::INT[])"
+                                   .format(str(years[0]),
+                                           str(weeks).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+                    for i in res:
+                        stats.append(i[0])
+
+            else:
+                if months is None and weeks is None:
+                    res = db.query("SELECT MainDB.shopschema.get_city_shop_stats_year('{{{0}}}'::INT[], {1})"
+                                   .format(str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                           str(city))).getresult()
+
+                    for i in res:
+                        stats.append(i[0])
+
+                elif months is not None and weeks is None:
+                    res = db.query("SELECT MainDB.shopschema.get_city_shop_stats_month({0}, '{{{1}}}'::INT[], {2})"
+                                   .format(str(years[0]),
+                                           str(months).replace('[', '').replace(']', '').replace('\'', ''),
+                                           str(city))).getresult()
+                    for i in res:
+                        stats.append(i[0])
+
+                elif months is None and weeks is not None:
+                    res = db.query("SELECT MainDB.shopschema.get_city_shop_stats_week({0}, '{{{1}}}'::INT[], {2})"
+                                   .format(str(years[0]),
+                                           str(weeks).replace('[', '').replace(']', '').replace('\'', ''),
+                                           str(city))).getresult()
+                    for i in res:
+                        stats.append(i[0])
+
+        return stats
 
     @staticmethod
     def getShopFreqStats(shopCode, years, months=None, weeks=None):
