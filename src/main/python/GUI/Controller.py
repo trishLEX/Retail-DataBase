@@ -190,8 +190,7 @@ class Controller:
         print("CNTRL:", shopStats)
         return shopStats
 
-    @staticmethod
-    def getCommonShopStats(years, months=None, weeks=None, city=None):
+    def getCommonShopStats(self, years, months=None, weeks=None, city=None):
         stats = []
         with DB(dbname='maindb', host='localhost', port=5432, user='postgres', passwd='0212') as db:
             if city is None:
@@ -241,6 +240,8 @@ class Controller:
                     for i in res:
                         stats.append(i[0])
 
+        stats = [self.__num(i) for i in stats]
+        print("COMMON STATS:", stats, city)
         return stats
 
     @staticmethod
@@ -275,9 +276,9 @@ class Controller:
                 # print(pairWomanStats)
 
             elif months is not None and weeks is None:
-                res = db.query("SELECT MainDB.shopschema.get_sku_pairs_frequency_month({0}, '{{{1}}}'::INT[], '{{{2}}}')"
+                res = db.query("SELECT MainDB.shopschema.get_sku_pairs_frequency_month({0}, {1}, '{{{2}}}'::INT[])"
                                .format(str(shopCode),
-                                       str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                       str(years[0]),
                                        str(months).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
 
                 for i in res:
@@ -286,9 +287,9 @@ class Controller:
                     else:
                         pairWomanStats.append((i[0][0], i[0][1], i[0][3]))
 
-                res = db.query("SELECT MainDB.shopschema.get_sku_frequency_month({0}, '{{{1}}}'::INT[], '{{{2}}}')"
+                res = db.query("SELECT MainDB.shopschema.get_sku_frequency_month({0}, {1}, '{{{2}}}'::INT[])"
                                .format(str(shopCode),
-                                       str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                       str(years[0]),
                                        str(months).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
 
                 for i in res:
@@ -299,9 +300,9 @@ class Controller:
 
             elif months is None and weeks is not None:
                 res = db.query(
-                    "SELECT MainDB.shopschema.get_sku_pairs_frequency_week({0}, '{{{1}}}'::INT[], '{{{2}}}')"
+                    "SELECT MainDB.shopschema.get_sku_pairs_frequency_week({0}, {1}, '{{{2}}}'::INT[])"
                         .format(str(shopCode),
-                                str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                str(years[0]),
                                 str(weeks).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
 
                 for i in res:
@@ -310,9 +311,9 @@ class Controller:
                     else:
                         pairWomanStats.append((i[0][0], i[0][1], i[0][3]))
 
-                res = db.query("SELECT MainDB.shopschema.get_sku_frequency_week({0}, '{{{1}}}'::INT[], '{{{2}}}')"
+                res = db.query("SELECT MainDB.shopschema.get_sku_frequency_week({0}, {1}, '{{{2}}}'::INT[])"
                                .format(str(shopCode),
-                                       str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                       str(years[0]),
                                        str(weeks).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
 
                 for i in res:
@@ -322,3 +323,156 @@ class Controller:
                         freqWomanStats.append((i[0][1], i[0][2]))
 
         return pairManStats, freqManStats, pairWomanStats, freqWomanStats
+
+    @staticmethod
+    def getCommonShopFreqStats(years, months=None, weeks=None, city=None):
+        pairManStats = []
+        pairWomanStats = []
+        freqManStats = []
+        freqWomanStats = []
+        print("COMMON DATES:", years, months, weeks, "CITY:", city)
+        with DB(dbname='maindb', host='localhost', port=5432, user='postgres', passwd='0212') as db:
+            if city is None:
+                if months is None and weeks is None:
+                    res = db.query("SELECT MainDB.shopschema.get_common_sku_pairs_frequency_year('{{{0}}}'::INT[])"
+                                   .format(str(years).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+                    for i in res:
+                        if i[0][2] == 'Man':
+                            pairManStats.append((i[0][0], i[0][1], i[0][3]))
+                        else:
+                            pairWomanStats.append((i[0][0], i[0][1], i[0][3]))
+
+                    res = db.query("SELECT MainDB.shopschema.get_common_sku_frequency_year('{{{0}}}'::INT[])"
+                                   .format(str(years).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+
+                    for i in res:
+                        if i[0][0] == 'Man':
+                            freqManStats.append((i[0][1], i[0][2]))
+                        else:
+                            freqWomanStats.append((i[0][1], i[0][2]))
+
+                elif months is not None and weeks is None:
+                    res = db.query(
+                        "SELECT MainDB.shopschema.get_common_sku_pairs_frequency_month({0}, '{{{1}}}'::INT[])"
+                            .format(str(years[0]),
+                                    str(months).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+
+                    for i in res:
+                        if i[0][2] == 'Man':
+                            pairManStats.append((i[0][0], i[0][1], i[0][3]))
+                        else:
+                            pairWomanStats.append((i[0][0], i[0][1], i[0][3]))
+
+                    res = db.query("SELECT MainDB.shopschema.get_common_sku_frequency_month({0}, '{{{1}}}'::INT[])"
+                                   .format(str(years[0]),
+                                           str(months).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+
+                    for i in res:
+                        if i[0][0] == 'Man':
+                            freqManStats.append((i[0][1], i[0][2]))
+                        else:
+                            freqWomanStats.append((i[0][1], i[0][2]))
+
+                elif months is None and weeks is not None:
+                    res = db.query(
+                        "SELECT MainDB.shopschema.get_common_sku_pairs_frequency_week({0}, '{{{1}}}'::INT[])"
+                            .format(str(years[0]),
+                                    str(weeks).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+
+                    for i in res:
+                        if i[0][2] == 'Man':
+                            pairManStats.append((i[0][0], i[0][1], i[0][3]))
+                        else:
+                            pairWomanStats.append((i[0][0], i[0][1], i[0][3]))
+
+                    res = db.query("SELECT MainDB.shopschema.get_common_sku_frequency_week({0}, '{{{1}}}'::INT[])"
+                                   .format(str(years[0]),
+                                           str(weeks).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+
+                    for i in res:
+                        if i[0][0] == 'Man':
+                            freqManStats.append((i[0][1], i[0][2]))
+                        else:
+                            freqWomanStats.append((i[0][1], i[0][2]))
+
+            else:
+                if months is None and weeks is None:
+                    res = db.query("SELECT MainDB.shopschema.get_common_sku_pairs_frequency_year('{{{0}}}'::INT[], {1})"
+                                   .format(str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                           str(city))).getresult()
+                    for i in res:
+                        if i[0][2] == 'Man':
+                            pairManStats.append((i[0][0], i[0][1], i[0][3]))
+                        else:
+                            pairWomanStats.append((i[0][0], i[0][1], i[0][3]))
+
+                    res = db.query("SELECT MainDB.shopschema.get_common_sku_frequency_year('{{{0}}}'::INT[], {1})"
+                                   .format(str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                           str(city))).getresult()
+
+                    for i in res:
+                        if i[0][0] == 'Man':
+                            freqManStats.append((i[0][1], i[0][2]))
+                        else:
+                            freqWomanStats.append((i[0][1], i[0][2]))
+
+                elif months is not None and weeks is None:
+                    res = db.query(
+                        "SELECT MainDB.shopschema.get_common_sku_pairs_frequency_month({0}, '{{{1}}}'::INT[], {2})"
+                            .format(str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                    str(months).replace('[', '').replace(']', '').replace('\'', ''),
+                                    str(city))).getresult()
+
+                    for i in res:
+                        if i[0][2] == 'Man':
+                            pairManStats.append((i[0][0], i[0][1], i[0][3]))
+                        else:
+                            pairWomanStats.append((i[0][0], i[0][1], i[0][3]))
+
+                    res = db.query("SELECT MainDB.shopschema.get_common_sku_frequency_month({0}, '{{{1}}}'::INT[], {2})"
+                                   .format(str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                           str(months).replace('[', '').replace(']', '').replace('\'', ''),
+                                           str(city))).getresult()
+
+                    for i in res:
+                        if i[0][0] == 'Man':
+                            freqManStats.append((i[0][1], i[0][2]))
+                        else:
+                            freqWomanStats.append((i[0][1], i[0][2]))
+
+                elif months is None and weeks is not None:
+                    res = db.query(
+                        "SELECT MainDB.shopschema.get_common_sku_pairs_frequency_week({0}, '{{{1}}}'::INT[], {2})"
+                            .format(str(years[0]),
+                                    str(weeks).replace('[', '').replace(']', '').replace('\'', ''),
+                                    str(city))).getresult()
+
+                    for i in res:
+                        if i[0][2] == 'Man':
+                            pairManStats.append((i[0][0], i[0][1], i[0][3]))
+                        else:
+                            pairWomanStats.append((i[0][0], i[0][1], i[0][3]))
+
+                    res = db.query("SELECT MainDB.shopschema.get_common_sku_frequency_week({0}, '{{{1}}}'::INT[], {2})"
+                                   .format(str(years[0]),
+                                           str(weeks).replace('[', '').replace(']', '').replace('\'', ''),
+                                           str(city))).getresult()
+
+                    for i in res:
+                        if i[0][0] == 'Man':
+                            freqManStats.append((i[0][1], i[0][2]))
+                        else:
+                            freqWomanStats.append((i[0][1], i[0][2]))
+
+        return pairManStats, freqManStats, pairWomanStats, freqWomanStats
+
+    def __num(self, xs):
+        res = [self.__num_element(i) for i in xs]
+        return res
+
+    @staticmethod
+    def __num_element(x):
+        try:
+            return int(x)
+        except ValueError:
+            return float(x)

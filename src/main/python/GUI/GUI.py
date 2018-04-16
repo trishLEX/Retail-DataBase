@@ -382,14 +382,14 @@ class Window(QMainWindow):
 
     def showTableShopWindow(self, shopName, years, months, weeks, isCommon):
         print(shopName)
-        isAll = isCommon
 
         if not isCommon:
             shopCode = self.controller.getShopCode(shopName)
         elif shopName != 'The whole company':
-            isAll = False
             city = self.controller.getCityCode(shopName)
             print("city:", city)
+        else:
+            city = None
 
         #print(shopName, "isCommon:", isCommon, shopName, shopCode)
         print([year.text(0) for year in years])
@@ -419,16 +419,6 @@ class Window(QMainWindow):
             else:
                 dates = [year.text(0) for year in years]
                 stats = self.controller.getShopStats(shopCode, years=dates)
-        elif isAll:
-            if len(months) != 0 and len(weeks) == 0:
-                dates = [month.text(0) for month in months]
-                stats = self.controller.getCommonShopStats(years=[years[0].text(0)], months=dates)
-            elif len(months) == 0 and len(weeks) != 0:
-                dates = [week.text(0) for week in weeks]
-                stats = self.controller.getCommonShopStats(years=[years[0].text(0)], weeks=dates)
-            else:
-                dates = [year.text(0) for year in years]
-                stats = self.controller.getCommonShopStats(years=dates)
         else:
             if len(months) != 0 and len(weeks) == 0:
                 dates = [month.text(0) for month in months]
@@ -457,7 +447,6 @@ class Window(QMainWindow):
         #     stats.append([i*2 for i in range(10)])
         #     stats.append([i*3 for i in range(10)])
 
-        # TODO сделать в порядке как в файле KPI
         labels = ["Conversion", "Units per transaction",
                   "Average check", "Sales per area", "Count of checks", "Returned units", "Count of visitors",
                   "Proceeds without tax", "Proceeds with tax", "Count of sold units"]
@@ -494,23 +483,31 @@ class Window(QMainWindow):
         # womanItemList = [["womanItem1", 1], ["womanItem2", 2], ["womanItem3", 3]]
         # womanFreqPairsList = [["womanItem1", "womanItem2", 2], ["womanItem1", "womanItem3", 4]]
 
-        print("A") # TODO сделать для common
-        manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = self.controller.getShopFreqStats(shopCode, years, months, weeks)
-        print("FREQ:",  manFreqPairsList, manItemList, womanFreqPairsList, womanItemList)
-
-        if len(months) != 0 and len(weeks) == 0:
-            #dates = [month.text(0) for month in months]
-            manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
-                self.controller.getShopFreqStats(shopCode, years=[years[0].text(0)], months=dates)
-        elif len(months) == 0 and len(weeks) != 0:
-            #dates = [month.text(0) for month in months]
-            manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
-                self.controller.getShopFreqStats(shopCode, years=[years[0].text(0)], weeks=dates)
+        if isCommon:
+            if len(months) != 0 and len(weeks) == 0:
+                manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
+                    self.controller.getCommonShopFreqStats(years=[years[0].text(0)], months=dates, city=city)
+            elif len(months) == 0 and len(weeks) != 0:
+                #dates = [month.text(0) for month in months]
+                manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
+                    self.controller.getCommonShopFreqStats(years=[years[0].text(0)], weeks=dates, city=city)
+            else:
+                #dates = [month.text(0) for month in months]
+                manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
+                    self.controller.getCommonShopFreqStats(years=dates, city=city)
         else:
-            #dates = [month.text(0) for month in months]
-            manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
-                self.controller.getShopFreqStats(shopCode, years=dates)
-
+            if len(months) != 0 and len(weeks) == 0:
+                #dates = [month.text(0) for month in months]
+                manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
+                    self.controller.getShopFreqStats(shopCode, years=[years[0].text(0)], months=dates)
+            elif len(months) == 0 and len(weeks) != 0:
+                #dates = [month.text(0) for month in months]
+                manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
+                    self.controller.getShopFreqStats(shopCode, years=[years[0].text(0)], weeks=dates)
+            else:
+                #dates = [month.text(0) for month in months]
+                manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
+                    self.controller.getShopFreqStats(shopCode, years=dates)
 
         manFreqPairsTable = QTableWidget()
         manFreqPairsTable.setRowCount(len(manFreqPairsList)) #TODO брать первые 5 пар или все, но в пределах разумного

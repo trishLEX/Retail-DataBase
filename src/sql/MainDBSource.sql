@@ -207,7 +207,33 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION MainDB.shopschema.get_sku_pairs_frequency_month(shopcode_p INT, years INT[], months INT[])
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_common_sku_pairs_frequency_year(years INT[], city INT DEFAULT 0)
+  RETURNS TABLE(item1 VARCHAR, item2 VARCHAR, sex VARCHAR, count BIGINT) AS $$
+BEGIN
+  IF city = 0 THEN
+    RETURN QUERY
+    SELECT (MainDB.shopschema.get_name_by_sku(substring(T.key, 2, 3)))[1],
+      (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[1],
+      (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[2], SUM(T.value::TEXT::INT) S FROM
+      (SELECT (jsonb_each((stats->>'skuPairsFreq')::JSONB)).key, (jsonb_each((stats->>'skuPairsFreq')::JSONB)).value
+       FROM MainDB.shopschema.Shops_Stats_Years WHERE
+         years @> (ARRAY[]::INT[] || year)) AS T GROUP BY T.key
+    ORDER BY S DESC ;
+  ELSE
+    RETURN QUERY
+    SELECT (MainDB.shopschema.get_name_by_sku(substring(T.key, 2, 3)))[1],
+      (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[1],
+      (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[2], SUM(T.value::TEXT::INT) S FROM
+      (SELECT (jsonb_each((stats->>'skuPairsFreq')::JSONB)).key, (jsonb_each((stats->>'skuPairsFreq')::JSONB)).value
+       FROM MainDB.shopschema.Shops_Stats_Years WHERE
+         years @> (ARRAY[]::INT[] || year)
+         AND shopCode / 100 = city) AS T GROUP BY T.key
+    ORDER BY S DESC ;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_sku_pairs_frequency_month(shopcode_p INT, year_p INT, months INT[])
   RETURNS TABLE(item1 VARCHAR, item2 VARCHAR, sex VARCHAR, count BIGINT) AS $$
 BEGIN
   RETURN QUERY
@@ -216,14 +242,41 @@ BEGIN
     (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[2], SUM(T.value::TEXT::INT) S FROM
     (SELECT (jsonb_each((stats->>'skuPairsFreq')::JSONB)).key, (jsonb_each((stats->>'skuPairsFreq')::JSONB)).value
      FROM MainDB.shopschema.Shops_Stats_Months WHERE
-       years @> (ARRAY[]::INT[] || year)
+       year = year_p
        AND months @> (ARRAY[]::INT[] || month)
        AND shopCode = shopcode_p) AS T GROUP BY T.key
   ORDER BY S DESC ;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION MainDB.shopschema.get_sku_pairs_frequency_week(shopcode_p INT, years INT[], weeks INT[])
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_common_sku_pairs_frequency_month(year_p INT, months INT[], city INT DEFAULT 0)
+  RETURNS TABLE(item1 VARCHAR, item2 VARCHAR, sex VARCHAR, count BIGINT) AS $$
+BEGIN
+  IF city = 0 THEN
+    RETURN QUERY
+    SELECT (MainDB.shopschema.get_name_by_sku(substring(T.key, 2, 3)))[1],
+      (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[1],
+      (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[2], SUM(T.value::TEXT::INT) S FROM
+      (SELECT (jsonb_each((stats->>'skuPairsFreq')::JSONB)).key, (jsonb_each((stats->>'skuPairsFreq')::JSONB)).value
+       FROM MainDB.shopschema.Shops_Stats_Months WHERE
+         year = year_p
+         AND months @> (ARRAY[]::INT[] || month)) AS T GROUP BY T.key
+    ORDER BY S DESC ;
+  ELSE RETURN QUERY
+  SELECT (MainDB.shopschema.get_name_by_sku(substring(T.key, 2, 3)))[1],
+    (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[1],
+    (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[2], SUM(T.value::TEXT::INT) S FROM
+    (SELECT (jsonb_each((stats->>'skuPairsFreq')::JSONB)).key, (jsonb_each((stats->>'skuPairsFreq')::JSONB)).value
+     FROM MainDB.shopschema.Shops_Stats_Months WHERE
+       year = year_p
+       AND months @> (ARRAY[]::INT[] || month)
+       AND shopCode / 100 = city) AS T GROUP BY T.key
+  ORDER BY S DESC ;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_sku_pairs_frequency_week(shopcode_p INT, year_p INT, weeks INT[])
   RETURNS TABLE(item1 VARCHAR, item2 VARCHAR, sex VARCHAR, count BIGINT) AS $$
 BEGIN
   RETURN QUERY
@@ -232,10 +285,37 @@ BEGIN
     (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[2], SUM(T.value::TEXT::INT) S FROM
     (SELECT (jsonb_each((stats->>'skuPairsFreq')::JSONB)).key, (jsonb_each((stats->>'skuPairsFreq')::JSONB)).value
      FROM MainDB.shopschema.Shops_Stats_Weeks WHERE
-       years @> (ARRAY[]::INT[] || year)
+       year = year_p
        AND weeks @> (ARRAY[]::INT[] || week)
        AND shopCode = shopcode_p) AS T GROUP BY T.key
   ORDER BY S DESC ;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_common_sku_pairs_frequency_week(year_p INT, weeks INT[], city INT DEFAULT 0)
+  RETURNS TABLE(item1 VARCHAR, item2 VARCHAR, sex VARCHAR, count BIGINT) AS $$
+BEGIN
+  IF city = 0 THEN
+    RETURN QUERY
+    SELECT (MainDB.shopschema.get_name_by_sku(substring(T.key, 2, 3)))[1],
+      (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[1],
+      (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[2], SUM(T.value::TEXT::INT) S FROM
+      (SELECT (jsonb_each((stats->>'skuPairsFreq')::JSONB)).key, (jsonb_each((stats->>'skuPairsFreq')::JSONB)).value
+       FROM MainDB.shopschema.Shops_Stats_Weeks WHERE
+         year = year_p
+         AND weeks @> (ARRAY[]::INT[] || week)) AS T GROUP BY T.key
+    ORDER BY S DESC ;
+  ELSE RETURN QUERY
+  SELECT (MainDB.shopschema.get_name_by_sku(substring(T.key, 2, 3)))[1],
+    (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[1],
+    (MainDB.shopschema.get_name_by_sku(substring(T.key, 6, 3)))[2], SUM(T.value::TEXT::INT) S FROM
+    (SELECT (jsonb_each((stats->>'skuPairsFreq')::JSONB)).key, (jsonb_each((stats->>'skuPairsFreq')::JSONB)).value
+     FROM MainDB.shopschema.Shops_Stats_Weeks WHERE
+       year = year_p
+       AND weeks @> (ARRAY[]::INT[] || week)
+       AND shopCode / 100 = city) AS T GROUP BY T.key
+  ORDER BY S DESC ;
+  END IF;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -250,31 +330,99 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION MainDB.shopschema.get_sku_frequency_month(shopcode_p INT, years INT[], months INT[])
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_common_sku_frequency_year(years INT[], city INT DEFAULT 0)
+  RETURNS TABLE (sex VARCHAR, item VARCHAR, count BIGINT) AS $$
+BEGIN
+  IF city = 0 THEN
+    RETURN QUERY
+    SELECT (MainDB.shopschema.get_name_by_sku(T.key))[2], (MainDB.shopschema.get_name_by_sku(T.key))[1], SUM(T.value::TEXT::INT) S FROM
+      (SELECT (jsonb_each((stats->>'skuFreq')::JSONB)).key, (jsonb_each((stats->>'skuFreq')::JSONB)).value
+       FROM MainDB.shopschema.Shops_Stats_Years WHERE
+         years @> (ARRAY[]::INT[] || year)) AS T GROUP BY T.key
+    ORDER BY S DESC;
+  ELSE RETURN QUERY
+  SELECT (MainDB.shopschema.get_name_by_sku(T.key))[2], (MainDB.shopschema.get_name_by_sku(T.key))[1], SUM(T.value::TEXT::INT) S FROM
+    (SELECT (jsonb_each((stats->>'skuFreq')::JSONB)).key, (jsonb_each((stats->>'skuFreq')::JSONB)).value
+     FROM MainDB.shopschema.Shops_Stats_Years WHERE
+       years @> (ARRAY[]::INT[] || year)
+       AND shopCode / 100 = city) AS T GROUP BY T.key
+  ORDER BY S DESC;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_sku_frequency_month(shopcode_p INT, year_p INT, months INT[])
   RETURNS TABLE (sex VARCHAR, item VARCHAR, count BIGINT) AS $$
 BEGIN
   RETURN QUERY
   SELECT (MainDB.shopschema.get_name_by_sku(T.key))[2], (MainDB.shopschema.get_name_by_sku(T.key))[1], SUM(T.value::TEXT::INT) S FROM
     (SELECT (jsonb_each((stats->>'skuFreq')::JSONB)).key, (jsonb_each((stats->>'skuFreq')::JSONB)).value
      FROM MainDB.shopschema.Shops_Stats_Months WHERE
-       years @> (ARRAY[]::INT[] || year)
+       year = year_p
        AND months @> (ARRAY[]::INT[] || month)
        AND shopCode = shopcode_p) AS T GROUP BY T.key
   ORDER BY S DESC;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION MainDB.shopschema.get_sku_frequency_week(shopcode_p INT, years INT[], weeks INT[])
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_common_sku_frequency_month(year_p INT, months INT[], city INT DEFAULT 0)
+  RETURNS TABLE (sex VARCHAR, item VARCHAR, count BIGINT) AS $$
+BEGIN
+  IF city = 0 THEN
+    RETURN QUERY
+    SELECT (MainDB.shopschema.get_name_by_sku(T.key))[2], (MainDB.shopschema.get_name_by_sku(T.key))[1], SUM(T.value::TEXT::INT) S FROM
+      (SELECT (jsonb_each((stats->>'skuFreq')::JSONB)).key, (jsonb_each((stats->>'skuFreq')::JSONB)).value
+       FROM MainDB.shopschema.Shops_Stats_Months WHERE
+         year = year_p
+         AND months @> (ARRAY[]::INT[] || month)) AS T GROUP BY T.key
+    ORDER BY S DESC;
+  ELSE RETURN QUERY
+  SELECT (MainDB.shopschema.get_name_by_sku(T.key))[2], (MainDB.shopschema.get_name_by_sku(T.key))[1], SUM(T.value::TEXT::INT) S FROM
+    (SELECT (jsonb_each((stats->>'skuFreq')::JSONB)).key, (jsonb_each((stats->>'skuFreq')::JSONB)).value
+     FROM MainDB.shopschema.Shops_Stats_Months WHERE
+       year = year_p
+       AND months @> (ARRAY[]::INT[] || month)
+       AND shopCode / 100 = city) AS T GROUP BY T.key
+  ORDER BY S DESC;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_sku_frequency_week(shopcode_p INT, year_p INT, weeks INT[])
   RETURNS TABLE (sex VARCHAR, item VARCHAR, count BIGINT) AS $$
 BEGIN
   RETURN QUERY
   SELECT (MainDB.shopschema.get_name_by_sku(T.key))[2], (MainDB.shopschema.get_name_by_sku(T.key))[1], SUM(T.value::TEXT::INT) S FROM
     (SELECT (jsonb_each((stats->>'skuFreq')::JSONB)).key, (jsonb_each((stats->>'skuFreq')::JSONB)).value
      FROM MainDB.shopschema.Shops_Stats_Weeks WHERE
-       years @> (ARRAY[]::INT[] || year)
+       year = year_p
        AND weeks @> (ARRAY[]::INT[] || week)
        AND shopCode = shopcode_p) AS T GROUP BY T.key
   ORDER BY S DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION MainDB.shopschema.get_common_sku_frequency_week(year_p INT, weeks INT[], city INT DEFAULT 0)
+  RETURNS TABLE (sex VARCHAR, item VARCHAR, count BIGINT) AS $$
+BEGIN
+  IF city = 0 THEN
+    RETURN QUERY
+    SELECT (MainDB.shopschema.get_name_by_sku(T.key))[2], (MainDB.shopschema.get_name_by_sku(T.key))[1], SUM(T.value::TEXT::INT) S FROM
+      (SELECT (jsonb_each((stats->>'skuFreq')::JSONB)).key, (jsonb_each((stats->>'skuFreq')::JSONB)).value
+       FROM MainDB.shopschema.Shops_Stats_Weeks WHERE
+         year = year_p
+         AND weeks @> (ARRAY[]::INT[] || week)) AS T GROUP BY T.key
+    ORDER BY S DESC;
+  ELSE RETURN QUERY
+  SELECT (MainDB.shopschema.get_name_by_sku(T.key))[2], (MainDB.shopschema.get_name_by_sku(T.key))[1], SUM(T.value::TEXT::INT) S FROM
+    (SELECT (jsonb_each((stats->>'skuFreq')::JSONB)).key, (jsonb_each((stats->>'skuFreq')::JSONB)).value
+     FROM MainDB.shopschema.Shops_Stats_Weeks WHERE
+       year = year_p
+       AND weeks @> (ARRAY[]::INT[] || week)
+       AND shopCode / 100 = city) AS T GROUP BY T.key
+  ORDER BY S DESC;
+  END IF;
 END;
 $$ LANGUAGE plpgsql;
 
