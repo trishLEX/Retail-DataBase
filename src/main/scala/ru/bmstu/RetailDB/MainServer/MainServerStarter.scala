@@ -46,16 +46,16 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
           path("cntrl") {
             entity(as[List[Int]]) { cards =>
               parameter('WEEK.as[Int], 'MONTH.as[Int], 'YEAR.as[Int], 'shopcode.as[Int]) {
+                case (0, 0, year, shopcode) => complete {
+                  dumpActor ! (0, 0, year, shopcode, cards)
+                  HttpResponse(StatusCodes.OK)
+                }
                 case (week, 0, year, shopcode) => complete {
                   dumpActor ! (week, 0, year, shopcode, cards)
                   HttpResponse(StatusCodes.OK)
                 }
                 case (0, month, year, shopcode) => complete {
                   dumpActor ! (0, month, year, shopcode, cards)
-                  HttpResponse(StatusCodes.OK)
-                }
-                case (0, 0, year, shopcode) => complete {
-                  dumpActor ! (0, 0, year, shopcode, cards)
                   HttpResponse(StatusCodes.OK)
                 }
               }
