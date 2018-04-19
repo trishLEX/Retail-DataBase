@@ -106,10 +106,10 @@ class Window(QMainWindow):
 
         parent.setText(0, "Years")
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-        years = [2015, 2016, 2017, 2018]
-        months = [1, 2, 3, 4, 5]
-        weeks = [1, 2, 3]
-        #years, months, weeks = self.controller.getCardTimes() TODO добавить
+        #years = [2015, 2016, 2017, 2018]
+        #months = [1, 2, 3, 4, 5]
+        #weeks = [1, 2, 3]
+        years, months, weeks = self.controller.getCardTimes()
 
         for year in years:
             child = QTreeWidgetItem(parent)
@@ -167,8 +167,8 @@ class Window(QMainWindow):
             res = True
             res = res and tree.topLevelItem(0).checkState(0) > 0
             res = res and (
-                    (((tree.topLevelItem(1).checkState(0) > 0) ^ (tree.topLevelItem(2).checkState(0) > 0)) and (checkOneYear()))
-                    or ((tree.topLevelItem(1).checkState(0) == 0) and (tree.topLevelItem(2).checkState(0) == 0)))
+                (((tree.topLevelItem(1).checkState(0) > 0) ^ (tree.topLevelItem(2).checkState(0) > 0)) and (checkOneYear()))
+                or ((tree.topLevelItem(1).checkState(0) == 0) and (tree.topLevelItem(2).checkState(0) == 0)))
 
             return res
 
@@ -183,7 +183,7 @@ class Window(QMainWindow):
 
         tabBar.show()
 
-    def shopChooseShopWindow(self, isCommon):
+    def shopChooseShopWindow(self, isCommon, start=0):
         tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
@@ -200,13 +200,29 @@ class Window(QMainWindow):
         tree = QTreeWidget()
         tree.setHeaderLabel("Choose a time period")
 
+        if isCommon:
+            #itemList = ["The whole company", "Moscow", "St. Petersburg", "Riga"]
+            itemList = self.controller.getCities()
+        else:
+            #itemList = ["Moscow 1","Moscow 2", "Moscow 3"]
+            itemList = self.controller.getShopNames()
+
         parent = QTreeWidgetItem(tree)
         parent.setText(0, "Years")
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-        years = [2015, 2016, 2017, 2018]
-        months = [1, 2, 3, 4, 5]
-        weeks = [1, 2, 3]
-        #years, months, weeks = self.controller.getShopTimes() TODO добавить
+        #years = [2015, 2016, 2017, 2018]
+        #months = [1, 2, 3, 4, 5]
+        #weeks = [1, 2, 3]
+
+        if isCommon:
+            years, months, weeks = self.controller.getCommonShopTimes(itemList[start])
+        else:
+            years, months, weeks = self.controller.getShopTimes(itemList[start])
+
+        shopList = QComboBox()
+        shopList.addItems(itemList)
+        shopList.setCurrentIndex(start)
+        shopList.currentIndexChanged.connect(lambda: self.shopChooseShopWindow(isCommon, shopList.currentIndex()))
 
         for year in years:
             child = QTreeWidgetItem(parent)
@@ -231,16 +247,6 @@ class Window(QMainWindow):
             child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
             child.setText(0, str(week))
             child.setCheckState(0, Qt.Unchecked)
-
-        shopList = QComboBox()
-        if isCommon:
-            #itemList = ["The whole company", "Moscow", "St. Petersburg", "Riga"]
-            itemList = self.controller.getCities()
-        else:
-            #itemList = ["Moscow 1","Moscow 2", "Moscow 3"]
-            itemList = self.controller.getShopNames()
-
-        shopList.addItems(itemList)
 
         showTable = QPushButton("Show Table")
         showTable.pressed.connect(lambda: self.showTableShopWindow(
@@ -269,8 +275,8 @@ class Window(QMainWindow):
             res = True
             res = res and tree.topLevelItem(0).checkState(0) > 0
             res = res and (
-                    (((tree.topLevelItem(1).checkState(0) > 0) ^ (tree.topLevelItem(2).checkState(0) > 0)) and (checkOneYear()))
-                    or ((tree.topLevelItem(1).checkState(0) == 0) and (tree.topLevelItem(2).checkState(0) == 0)))
+                (((tree.topLevelItem(1).checkState(0) > 0) ^ (tree.topLevelItem(2).checkState(0) > 0)) and (checkOneYear()))
+                or ((tree.topLevelItem(1).checkState(0) == 0) and (tree.topLevelItem(2).checkState(0) == 0)))
 
             return res
 
@@ -311,12 +317,15 @@ class Window(QMainWindow):
         if len(months) != 0 and len(weeks) == 0:
             dates = [month.text(0) for month in months]
             stats = self.controller.getCardStats(shopCode, years=[years[0].text(0)], months=dates)
+            time = "Month"
         elif len(months) == 0 and len(weeks) != 0:
             dates = [week.text(0) for week in weeks]
             stats = self.controller.getCardStats(shopCode, years=[years[0].text(0)], weeks=dates)
+            time = "Week"
         else:
             dates = [year.text(0) for year in years]
             stats = self.controller.getCardStats(shopCode, years=dates)
+            time = "Year"
 
         print("DATES:", dates)
 
@@ -325,21 +334,6 @@ class Window(QMainWindow):
 
         # 1 - Количество чеков по картам, 2 - их % от общего числа чеков, 3 - totalSum по картам, 4 - % от общего totalSum
         table.setRowCount(4)
-
-        # stats = [[i + 1 for i in range(4)]]
-        # if len(dates) == 2:
-        #     stats.append([i*i + 1 for i in range(4)])
-        # if len(dates) == 3:
-        #     stats.append([i*i + 1 for i in range(4)])
-        #     stats.append([i*2 + 1 for i in range(4)])
-        # if len(dates) == 4:
-        #     stats.append([i*i + 1 for i in range(4)])
-        #     stats.append([i*2 + 1 for i in range(4)])
-        #     stats.append([i*3 + 1 for i in range(4)])
-        #
-        # for i in stats:
-        #     i[1] = i[1] / 15
-        #     i[3] = i[3] / 15
 
         labels = ["A number of checks with cards",
                   "The ratio of the number of checks with cards to the number of all checks",
@@ -365,7 +359,7 @@ class Window(QMainWindow):
         table.horizontalHeader().setStretchLastSection(True)
 
         toExcel = QPushButton("To Excel")
-        toExcel.pressed.connect(lambda: self.toExcelCard(stats, dates, labels))
+        toExcel.pressed.connect(lambda: self.toExcelCard(stats, dates, labels, time))
 
         diagram = QPushButton("View Diagram")
         diagram.pressed.connect(lambda: self.viewCardDiagram(stats, dates, labels, shopName, years, months, weeks))
@@ -413,22 +407,28 @@ class Window(QMainWindow):
             if len(months) != 0 and len(weeks) == 0:
                 dates = [month.text(0) for month in months]
                 stats = self.controller.getShopStats(shopCode, years=[years[0].text(0)], months=dates)
+                time = "Month"
             elif len(months) == 0 and len(weeks) != 0:
                 dates = [week.text(0) for week in weeks]
                 stats = self.controller.getShopStats(shopCode, years=[years[0].text(0)], weeks=dates)
+                time = "Week"
             else:
                 dates = [year.text(0) for year in years]
                 stats = self.controller.getShopStats(shopCode, years=dates)
+                time = "Year"
         else:
             if len(months) != 0 and len(weeks) == 0:
                 dates = [month.text(0) for month in months]
                 stats = self.controller.getCommonShopStats(years=[years[0].text(0)], months=dates, city=city)
+                time = "Month"
             elif len(months) == 0 and len(weeks) != 0:
                 dates = [week.text(0) for week in weeks]
                 stats = self.controller.getCommonShopStats(years=[years[0].text(0)], weeks=dates, city=city)
+                time = "Week"
             else:
                 dates = [year.text(0) for year in years]
                 stats = self.controller.getCommonShopStats(years=dates, city=city)
+                time = "Year"
 
         print("DATES", dates)
 
@@ -436,20 +436,11 @@ class Window(QMainWindow):
         table.setColumnCount(10)
         table.setRowCount(len(dates))
 
-        # stats = [[i for i in range(10)]]
-        # if len(dates) == 2:
-        #     stats.append([i*i for i in range(10)])
-        # if len(dates) == 3:
-        #     stats.append([i*i for i in range(10)])
-        #     stats.append([i*2 for i in range(10)])
-        # if len(dates) == 4:
-        #     stats.append([i*i for i in range(10)])
-        #     stats.append([i*2 for i in range(10)])
-        #     stats.append([i*3 for i in range(10)])
 
         labels = ["Conversion", "Units per transaction",
                   "Average check", "Sales per area", "Count of checks", "Returned units", "Count of visitors",
                   "Proceeds without tax", "Proceeds with tax", "Count of sold units"]
+
         table.setHorizontalHeaderLabels(labels)
         table.setVerticalHeaderLabels(dates)
         header = table.horizontalHeader()
@@ -467,9 +458,6 @@ class Window(QMainWindow):
         table.resizeRowsToContents()
         table.horizontalHeader().setStretchLastSection(True)
 
-        toExcel = QPushButton("To Excel")
-        toExcel.pressed.connect(lambda: self.toExcelShop(stats, dates, labels))
-
         diagram = QPushButton("View Diagram")
         diagram.pressed.connect(
             lambda: self.viewShopDiagram(stats, dates, labels, shopName, years, months, weeks, isCommon))
@@ -477,11 +465,6 @@ class Window(QMainWindow):
         itemPairsLabels = ["First Item", "Second Item", "Frequency"]
         ItemLabels = ["Item", "Count"]
 
-        # manFreqPairsList = [["manItem1", "manItem2", 1], ["manItem1", "manItem3", 3],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1],["manItem1", "manItem2", 1]]
-        # manItemList = [["manItem1", 1], ["manItem2", 2], ["manItem3", 3]]
-        #
-        # womanItemList = [["womanItem1", 1], ["womanItem2", 2], ["womanItem3", 3]]
-        # womanFreqPairsList = [["womanItem1", "womanItem2", 2], ["womanItem1", "womanItem3", 4]]
 
         if isCommon:
             if len(months) != 0 and len(weeks) == 0:
@@ -508,6 +491,10 @@ class Window(QMainWindow):
                 #dates = [month.text(0) for month in months]
                 manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
                     self.controller.getShopFreqStats(shopCode, years=dates)
+
+        toExcel = QPushButton("To Excel")
+        toExcel.pressed.connect(lambda: self.toExcelShop(stats, dates, labels, time,
+                                                         manFreqPairsList, manItemList, womanFreqPairsList, womanItemList))
 
         manFreqPairsTable = QTableWidget()
         manFreqPairsTable.setRowCount(len(manFreqPairsList)) #TODO брать первые 5 пар или все, но в пределах разумного
@@ -867,7 +854,87 @@ class Window(QMainWindow):
             if ok:
                 plot.save(path + '/' + text + ".png")
 
-    def toExcelShop(self, stats, dates, labels):
+    def toExcelShop(self, stats, dates, labels, timeName, manFreqPairsList, manItemList, womanFreqPairsList, womanItemList):
+        path = QFileDialog().getExistingDirectory(self, 'Choose a directory')
+
+        if path:
+
+            text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.xlsx to save:')
+
+            while text == "" and ok:
+                error = QMessageBox()
+                error.setIcon(QMessageBox.Critical)
+                error.setText("File's name is not chosen!")
+                error.setStandardButtons(QMessageBox.Ok)
+                error.exec_()
+
+                text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.xlsx to save:')
+
+            if ok:
+                fileStats = openpyxl.Workbook()
+
+                fileStats.create_sheet('Stats', 0)
+                fileStats.create_sheet('Man Pairs', 1)
+                fileStats.create_sheet('Man Items', 2)
+                fileStats.create_sheet('Woman Pairs', 3)
+                fileStats.create_sheet('Woman Items', 4)
+
+                ws = fileStats['Stats']
+
+                ws.cell(row=1, column=1).value = timeName
+
+                for i in range(len(dates)):
+                    ws.cell(row=i + 2, column=1).value = int(dates[i])
+
+                for i in range(len(labels)):
+                    ws.cell(row=1, column=i + 2).value = labels[i]
+
+                for i in range(len(stats)):
+                    for j in range(len(stats[i])):
+                        ws.cell(row=i + 2, column=j + 2).value = stats[i][j]
+
+                ws = fileStats['Man Pairs']
+
+                ws.cell(row=1, column=1).value = "First Item"
+                ws.cell(row=1, column=2).value = "Second Item"
+                ws.cell(row=1, column=3).value = "Frequency"
+
+                for i in range(len(manFreqPairsList)):
+                    for j in range(len(manFreqPairsList[i])):
+                        ws.cell(row=i + 2, column=j + 1).value = str(manFreqPairsList[i][j])
+
+                ws = fileStats['Man Items']
+
+                ws.cell(row=1, column=1).value = "Item"
+                ws.cell(row=1, column=2).value = "Count"
+
+                for i in range(len(manItemList)):
+                    for j in range(len(manItemList[i])):
+                        ws.cell(row=i + 2, column=j + 1).value = str(manItemList[i][j])
+
+                ws = fileStats['Woman Pairs']
+
+                ws.cell(row=1, column=1).value = "First Item"
+                ws.cell(row=1, column=2).value = "Second Item"
+                ws.cell(row=1, column=3).value = "Frequency"
+
+                for i in range(len(womanFreqPairsList)):
+                    for j in range(len(womanFreqPairsList[i])):
+                        ws.cell(row=i + 2, column=j + 1).value = str(womanFreqPairsList[i][j])
+
+                ws = fileStats['Woman Items']
+
+                ws.cell(row=1, column=1).value = "Item"
+                ws.cell(row=1, column=2).value = "Count"
+
+                for i in range(len(womanItemList)):
+                    for j in range(len(womanItemList[i])):
+                        ws.cell(row=i + 2, column=j + 1).value = str(womanItemList[i][j])
+
+                print(path + '/' + text + ".xlsx")
+                fileStats.save(path + '/' + text + ".xlsx")
+
+    def toExcelCard(self, stats, dates, labels, timeName):
         path = QFileDialog().getExistingDirectory(self, 'Choose a directory')
 
         if path:
@@ -897,6 +964,8 @@ class Window(QMainWindow):
                 for i in range(len(stats)):
                     for j in range(len(stats[i])):
                         ws.cell(row=i + 2, column=j + 2).value = stats[i][j]
+
+                ws.cell(row=0, column=0).value = timeName
 
                 print(path + '/' + text + ".xlsx")
                 fileStats.save(path + '/' + text + ".xlsx")
