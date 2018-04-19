@@ -27,42 +27,14 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   implicit val jsonCardsStatMap = jsonFormat3(CardStatsMap.apply)
 
   override def receive: Receive = {
-    case ("WEEK",  shopcode: Int, cards: List[Int]) => dump("WEEK",  shopcode, cards)
-    case ("MONTH", shopcode: Int, cards: List[Int]) => dump("MONTH", shopcode, cards)
-    case ("YEAR",  shopcode: Int, cards: List[Int]) => dump("YEAR",  shopcode, cards)
+    case (week: Int, 0, year: Int, shopcode: Int, cards: List[Int]) => dump(week, 0, year, shopcode, cards)
+    case (0, month: Int, year: Int, shopcode: Int, cards: List[Int]) => dump(0, month, year, shopcode, cards)
+    case (0, 0, year: Int, shopcode: Int, cards: List[Int]) => dump(0, 0, year, shopcode, cards)
 //    case ("MONTH CARD")           => cleanMonthCard()
 //    case ("YEAR CARD")            => cleanYearCard()
   }
 
-  private def cleanMonthCard() = {
-    val connection = DriverManager.getConnection(connectionString)
-
-    try {
-      val cardPreparedStatment = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfMonth}', '{\"bought\":{}, \"totalSum\":0}')")
-      cardPreparedStatment.execute()
-
-    } catch {
-      case e: Exception => e.printStackTrace(); null
-    } finally {
-      connection.close()
-    }
-  }
-
-  private def cleanYearCard() = {
-    val connection = DriverManager.getConnection(connectionString)
-
-    try {
-      val cardPreparedStatment = connection.prepareStatement("UPDATE MainDB.shopschema.Card SET stats = jsonb_set(stats, '{statsOfYear}', '{\"bought\":{}, \"totalSum\":0}')")
-      cardPreparedStatment.execute()
-
-    } catch {
-      case e: Exception => e.printStackTrace(); null
-    } finally {
-      connection.close()
-    }
-  }
-
-  private def dump(date: String, shopCode: Int, cards: List[Int]) = {
+  private def dump(week: Int, month: Int, year: Int, shopCode: Int, cards: List[Int]) = {
     classOf[org.postgresql.Driver]
 
     val connection = DriverManager.getConnection(connectionString)
@@ -72,13 +44,13 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     try {
       val stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
-      println("DATE: " + date)
+      println("DATE: " + week + " " + month + " " + year)
 
-      if (date == "WEEK")
-        dumpWeek (connection, stmt, shopCode, year, Calendar.getInstance().get(Calendar.WEEK_OF_YEAR), cards)
-      else if (date == "MONTH")
-        dumpMonth(connection, stmt, shopCode, year, Calendar.getInstance().get(Calendar.MONTH) + 1, cards)
-      else if (date == "YEAR")
+      if (week != 0 && month == 0)
+        dumpWeek (connection, stmt, shopCode, year, week, cards)
+      else if (week == 0 && month != 0)
+        dumpMonth(connection, stmt, shopCode, year, month, cards)
+      else if (week == 0 && month == 0)
         dumpYear (connection, stmt, shopCode, year, cards)
 
     } catch {

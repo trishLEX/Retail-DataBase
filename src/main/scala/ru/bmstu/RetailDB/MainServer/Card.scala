@@ -2,15 +2,15 @@ package ru.bmstu.RetailDB.MainServer
 
 import scalaz.Scalaz._
 
-case class Card(cardID: Int, totalCost: Float, statMap: Map[String, Map[String, Int]], checkCount: Int) {
+case class Card(cardID: Int, totalCost: Float, bought: Map[String, Map[String, Int]], checkCount: Int) {
   def +(other: Card): Card = {
     if (this.cardID != other.cardID)
       throw new Exception("cardID's are not equal")
     else
-      Card(this.cardID, this.totalCost + other.totalCost, this.statMap |+| other.statMap, this.checkCount + other.checkCount)
+      Card(this.cardID, this.totalCost + other.totalCost, this.bought |+| other.bought, this.checkCount + other.checkCount)
   }
 
-  def getStats = CardStats(cardID, CardStatsMap(statMap, totalCost, checkCount))
+  def getStats = CardStats(cardID, CardStatsMap(bought, totalCost, checkCount))
 }
 
 //case class CardStats(cardID: Int, stats: Map[String, Map[String, Int]])

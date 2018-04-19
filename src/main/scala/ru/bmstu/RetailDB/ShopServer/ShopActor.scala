@@ -25,7 +25,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
   override def receive: Receive = {
     //TODO сделать для GO и RESEND константы
-    case "GO" => sendStats()
+    case "GO" => sendCntrlMsg(100)//sendStats()
     case "RESEND" => resend()
   }
 
@@ -40,8 +40,8 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     //val shopStats = ShopStats(100, Stats(100, 1, 0, 100, 100, 100, 100, 0, 0, 0)).toJson
     sendCache(List(new File(ShopServerStarter.PATH_TO_CARDS_CACHE), new File(ShopServerStarter.PATH_TO_SHOP_CACHE)))
 
-    val shopStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, shopStats.prettyPrint))
-    val cardsStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, cardsStats.prettyPrint))
+    val shopStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/stats", entity = HttpEntity(ContentTypes.`application/json`, shopStats.prettyPrint))
+    val cardsStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/stats", entity = HttpEntity(ContentTypes.`application/json`, cardsStats.prettyPrint))
 
     Http(context.system).singleRequest(shopStatsReq).onComplete{
       case Success(response) => if (response.status != StatusCodes.OK) {println("ERROR IN SHOPSTATS REQUEST: " + response.status); resendStats(shopStats, 0)}
@@ -50,7 +50,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
     Http(context.system).singleRequest(cardsStatsReq).onComplete {
       case Success(resp) => if (resp.status != StatusCodes.OK) {println("ERROR IN CARDSSTATS REQUEST: " + resp.status); resendStats(cardsStats, 1)} else sendCntrlMsg(stats._1.shopCode)
-      case Failure(error) => println("CARDSSTATS REQUEST FAILED: " + error.getMessage); resendStats(cardsStats, 1)
+      case Failure(error) => println("CARDSSTATS REQUEST FAILED: " + error.getMessage); resendStats(cardsStats, 1); sendCntrlMsg(stats._1.shopCode)
     }
   }
 
@@ -58,7 +58,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     val now = Calendar.getInstance()
 //    now.setTime(new SimpleDateFormat("yyyy-MM-dd").parse("2018-04-30"))
 
-    if (now.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+    if (now.get(Calendar.DAY_OF_WEEK) == Calendar.THURSDAY) {
       val today = Calendar.getInstance()
       today.add(Calendar.WEEK_OF_YEAR, -1)
       val from = today.get(Calendar.YEAR) + "-" + today.get(Calendar.MONTH) + "-" + today.get(Calendar.DAY_OF_MONTH)
@@ -66,9 +66,17 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
       val cards = getCards(from, to).toJson
 
-      Http(context.system).singleRequest(
-        HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=WEEK&shopcode=" + shopCode, entity = HttpEntity(ContentTypes.`application/json`, cards.prettyPrint))
-      )
+
+      //val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=WEEK&shopcode=" + shopCode, entity = HttpEntity(ContentTypes.`application/json`, cards.prettyPrint))
+      val calendar = Calendar.getInstance()
+      println(cards, "WEEK=" + calendar.get(Calendar.WEEK_OF_YEAR) +
+        "&MONTH=0&YEAR=" + calendar.get(Calendar.YEAR) +"&shopcode=" + shopCode)
+      val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrl?WEEK=" + calendar.get(Calendar.WEEK_OF_YEAR) +
+        "&MONTH=0&YEAR=" + calendar.get(Calendar.YEAR) +"&shopcode=" + shopCode, entity = HttpEntity(ContentTypes.`application/json`, cards.prettyPrint))
+
+      Http(context.system).singleRequest(cntrlMsgReq)//.onComplete {
+        //case Success(resp) => if (resp.status != StatusCodes.OK) resendCntrMsg(0, ) MONTH + 1
+      //}
     }
     else if (now.get(Calendar.DAY_OF_MONTH) == now.getActualMaximum(Calendar.DAY_OF_MONTH)) {
       val today = Calendar.getInstance()
@@ -78,9 +86,11 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
       val cards = getCards(from, to).toJson
 
-      Http(context.system).singleRequest(
-        HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=MONTH&shopcode=" + shopCode, entity = HttpEntity(ContentTypes.`application/json`, cards.prettyPrint))
-      )
+      val calendar = Calendar.getInstance()
+      val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrl?WEEK=0&MONTH=" + (calendar.get(Calendar.MONTH) + 1) +
+        "&YEAR=" + calendar.get(Calendar.YEAR) + "&shopcode=" + shopCode, entity = HttpEntity(ContentTypes.`application/json`, cards.prettyPrint))
+
+      Http(context.system).singleRequest(cntrlMsgReq)
     }
     else if (now.get(Calendar.DAY_OF_YEAR) == now.getActualMaximum(Calendar.DAY_OF_YEAR)) {
       val today = Calendar.getInstance()
@@ -90,9 +100,11 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
       val cards = getCards(from, to).toJson
 
-      Http(context.system).singleRequest(
-        HttpRequest(HttpMethods.POST, "http://localhost:8888/?date=YEAR&shopcode=" + shopCode, entity = HttpEntity(ContentTypes.`application/json`, cards.prettyPrint))
-      )
+      val calendar = Calendar.getInstance()
+      val cntrlMsg = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrl?WEEK=0&MONTH=0&YEAR=" + calendar.get(Calendar.YEAR) +
+        "&shopcode=" + shopCode, entity = HttpEntity(ContentTypes.`application/json`, cards.prettyPrint))
+
+      Http(context.system).singleRequest(cntrlMsg)
     }
   }
 
@@ -137,7 +149,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
 
     Http(context.system)
       .singleRequest(
-        HttpRequest(HttpMethods.POST, "http://localhost:8888/", entity = HttpEntity(ContentTypes.`application/json`, srcBuffer.mkString))
+        HttpRequest(HttpMethods.POST, "http://localhost:8888/stats", entity = HttpEntity(ContentTypes.`application/json`, srcBuffer.mkString))
       )
       .onComplete(resp => {srcBuffer.close(); if (resp.get.status == StatusCodes.OK) file.delete()})
   }
@@ -265,9 +277,9 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   }
 
   private def getCardsStats(connection: Connection, shopCode: Int, today: Date): List[CardStats] = {
-    var preparedStatement = connection.prepareStatement("SELECT cardid, totalcostwithtax::NUMERIC::FLOAT, array_agg(sku) as purchases FROM shopdb.shopschema.cards_purchases GROUP BY cardid, date, totalcostwithtax HAVING date::date = '2018-01-01' OR date::date = '2018-01-06'")
+    val preparedStatement = connection.prepareStatement("SELECT cardid, totalcostwithtax::NUMERIC::FLOAT, array_agg(sku) as purchases FROM shopdb.shopschema.cards_purchases GROUP BY cardid, date, totalcostwithtax HAVING date::date = '2018-01-01' OR date::date = '2018-01-06'")
     //preparedStatement.setDate(1, today)
-    var resultSet = preparedStatement.executeQuery()
+    val resultSet = preparedStatement.executeQuery()
 
     def iter: Iterator[ResultSet] = new Iterator[ResultSet] {
       val rs = resultSet

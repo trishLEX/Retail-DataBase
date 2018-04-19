@@ -23,31 +23,44 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
     val serverActor = system.actorOf(Props[ServerActor], "serverActor")
     val dumpActor = system.actorOf(Props[DumpActor], "dumpActor")
 
-    val route =
-    {
+    val route = {
       post {
-        entity(as[ShopStats]) {
-          stats => complete {
-            serverActor ! stats
-            HttpResponse(StatusCodes.OK)
+        path("stats") {
+          entity(as[ShopStats]) {
+            stats =>
+              complete {
+                serverActor ! stats
+                HttpResponse(StatusCodes.OK)
+              }
           }
         } ~
-        entity(as[List[Card]]) {
-          stats => complete {
-            serverActor ! stats
-            HttpResponse(StatusCodes.OK)
-          }
-        } ~
-        pathSingleSlash {
-          entity(as[List[Int]]) { cards =>
-            parameter('date, 'shopcode.as[Int]) {
-              case ("WEEK",  shopcode) => complete {dumpActor ! ("WEEK",  shopcode, cards); HttpResponse(StatusCodes.OK)}
-              case ("MONTH", shopcode) => complete {dumpActor ! ("MONTH", shopcode, cards); HttpResponse(StatusCodes.OK)}
-              case ("YEAR",  shopcode) => complete {dumpActor ! ("YEAR",  shopcode, cards); HttpResponse(StatusCodes.OK)}
-              case _                   => complete(HttpResponse(StatusCodes.BadRequest))
+          path("stats") {
+            entity(as[List[Card]]) {
+              stats =>
+                complete {
+                  serverActor ! stats
+                  HttpResponse(StatusCodes.OK)
+                }
+            }
+          } ~
+          path("cntrl") {
+            entity(as[List[Int]]) { cards =>
+              parameter('WEEK.as[Int], 'MONTH.as[Int], 'YEAR.as[Int], 'shopcode.as[Int]) {
+                case (week, 0, year, shopcode) => complete {
+                  dumpActor ! (week, 0, year, shopcode, cards)
+                  HttpResponse(StatusCodes.OK)
+                }
+                case (0, month, year, shopcode) => complete {
+                  dumpActor ! (0, month, year, shopcode, cards)
+                  HttpResponse(StatusCodes.OK)
+                }
+                case (0, 0, year, shopcode) => complete {
+                  dumpActor ! (0, 0, year, shopcode, cards)
+                  HttpResponse(StatusCodes.OK)
+                }
+              }
             }
           }
-        }
       }
     }
 
