@@ -13,6 +13,8 @@ object ShopServerStarter extends App {
 
   final val PATH_TO_RETAIL_CACHE = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\main\\scala\\ru\\bmstu\\RetailDB\\ShopServer\\RetailCache"
 
+  final val SHOPCODE = 100
+
   private def deployDB(): Unit = {
     Runtime.getRuntime.exec("psql -U postgres -f " + PATH_TO_CREATEDB)
     Runtime.getRuntime.exec("psql -d shopb -U postgres -f " + PATH_TO_DBSOURCE)
@@ -35,7 +37,7 @@ object ShopServerStarter extends App {
     implicit val materializer = ActorMaterializer()
     implicit val executionContext = system.dispatcher
 
-    val shopActor = system.actorOf(Props[ShopActor], "serverActor")
+    val shopActor = system.actorOf(Props(new ShopActor(SHOPCODE)), "serverActor")
 
 //    TODO добавить в production:
 //    val scheduler = QuartzSchedulerExtension(system)

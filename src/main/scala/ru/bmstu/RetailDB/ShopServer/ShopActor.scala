@@ -16,7 +16,16 @@ import scala.io.Source
 import scala.util.{Failure, Success}
 import scalaz.Scalaz._
 
-class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
+object ShopActor {
+  var msgCount = 0
+
+  def getMsgID: Int = {
+    msgCount += 1
+    msgCount
+  }
+}
+
+class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   implicit val jsonStats = jsonFormat12(Stats)
   implicit val jsonShopStats = jsonFormat2(ShopStats)
   implicit val jsonCardsStats = jsonFormat4(CardStats)
@@ -41,8 +50,10 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     //val shopStats = ShopStats(100, Stats(100, 1, 0, 100, 100, 100, 100, 0, 0, 0)).toJson
     sendCache(new File(ShopServerStarter.PATH_TO_RETAIL_CACHE))
 
-    val shopStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/stats", entity = HttpEntity(ContentTypes.`application/json`, shopStats.prettyPrint))
-    val cardsStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/stats", entity = HttpEntity(ContentTypes.`application/json`, cardsStats.prettyPrint))
+    val shopStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/stats?msgid=" + ShopActor.getMsgID + "&shopcode=" + shopCode,
+      entity = HttpEntity(ContentTypes.`application/json`, shopStats.prettyPrint))
+    val cardsStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/stats?msgid=" + ShopActor.getMsgID + "&shopcode=" + shopCode,
+      entity = HttpEntity(ContentTypes.`application/json`, cardsStats.prettyPrint))
 
     Http(context.system).singleRequest(shopStatsReq).onComplete{
       case Success(response) => if (response.status != StatusCodes.OK) {println("ERROR IN SHOPSTATS REQUEST: " + response.status); resendStats(shopStats, 0)}
@@ -50,16 +61,16 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     }
 
     Http(context.system).singleRequest(cardsStatsReq).onComplete {
-      case Success(resp) => if (resp.status != StatusCodes.OK) {println("ERROR IN CARDSSTATS REQUEST: " + resp.status); resendStats(cardsStats, 1)} else sendCntrlMsg(stats._1.shopCode)
-      case Failure(error) => println("CARDSSTATS REQUEST FAILED: " + error.getMessage); resendStats(cardsStats, 1); sendCntrlMsg(stats._1.shopCode)
+      case Success(resp) => if (resp.status != StatusCodes.OK) {println("ERROR IN CARDSSTATS REQUEST: " + resp.status); resendStats(cardsStats, 1)} else sendCntrlMsg()
+      case Failure(error) => println("CARDSSTATS REQUEST FAILED: " + error.getMessage); resendStats(cardsStats, 1); sendCntrlMsg()
     }
   }
 
-  private def sendCntrlMsg(shopCode: Int) = {
+  private def sendCntrlMsg() = {
     val now = Calendar.getInstance()
 //    now.setTime(new SimpleDateFormat("yyyy-MM-dd").parse("2018-04-30"))
 
-    if (now.get(Calendar.DAY_OF_WEEK) == Calendar.THURSDAY) {
+    if (now.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
       val today = Calendar.getInstance()
       today.add(Calendar.WEEK_OF_YEAR, -1)
       val from = today.get(Calendar.YEAR) + "-" + today.get(Calendar.MONTH) + "-" + today.get(Calendar.DAY_OF_MONTH)
@@ -71,7 +82,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       val cntrlMsg = ControlMessage(0, 0, calendar.get(Calendar.YEAR), shopCode, cards)
 
       val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrl?WEEK=" + cntrlMsg.week +
-        "&MONTH=" + cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode,
+        "&MONTH=" + cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode + "&msgid=" + ShopActor.getMsgID,
         entity = HttpEntity(ContentTypes.`application/json`, cards.toJson.prettyPrint))
 
       Http(context.system).singleRequest(cntrlMsgReq).onComplete {
@@ -91,7 +102,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       val cntrlMsg = ControlMessage(0, 0, calendar.get(Calendar.YEAR), shopCode, cards)
 
       val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrl?WEEK=" + cntrlMsg.week +
-        "&MONTH=" + cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode,
+        "&MONTH=" + cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode + "&msgid=" + ShopActor.getMsgID,
         entity = HttpEntity(ContentTypes.`application/json`, cards.toJson.prettyPrint))
 
       Http(context.system).singleRequest(cntrlMsgReq).onComplete {
@@ -111,11 +122,11 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       val cntrlMsg = ControlMessage(0, 0, calendar.get(Calendar.YEAR), shopCode, cards)
 
       val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrl?WEEK=" + cntrlMsg.week +
-        "&MONTH=" + cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode,
+        "&MONTH=" + cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode + "&msgid=" + ShopActor.getMsgID,
         entity = HttpEntity(ContentTypes.`application/json`, cards.toJson.prettyPrint))
 
       Http(context.system).singleRequest(cntrlMsgReq).onComplete {
-        case Success(resp) => if (resp.status != StatusCodes.OK) resendStats(cntrlMsg.toJson, 2)
+        case Success(resp) => if (resp.status != StatusCodes.OK) resendStats(cntrlMsg.toJson, 2) else ShopActor.msgCount = 0
         case Failure(error) => resendStats(cntrlMsg.toJson, 2)
       }
     }
@@ -165,17 +176,22 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       Http(context.system)
         .singleRequest(
           HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrl?WEEK=" + cntrlMsg.week +
-            "&MONTH=" + cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode,
+            "&MONTH=" + cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode + "&msgid=" + ShopActor.getMsgID,
             entity = HttpEntity(ContentTypes.`application/json`, cntrlMsg.cards.toJson.prettyPrint))
         )
         .onComplete(resp => {
-          srcBuffer.close(); if (resp.get.status == StatusCodes.OK) file.delete()
+          srcBuffer.close(); if (resp.get.status == StatusCodes.OK) {
+            file.delete()
+            if (cntrlMsg.week == 0 && cntrlMsg.month == 0)
+              ShopActor.msgCount = 0
+          }
         })
     }
     else
       Http(context.system)
       .singleRequest(
-        HttpRequest(HttpMethods.POST, "http://localhost:8888/stats", entity = HttpEntity(ContentTypes.`application/json`, srcBuffer.mkString))
+        HttpRequest(HttpMethods.POST, "http://localhost:8888/stats?msgid=" + ShopActor.getMsgID + "&shopcode=" + shopCode,
+          entity = HttpEntity(ContentTypes.`application/json`, srcBuffer.mkString))
       )
       .onComplete(resp => {srcBuffer.close(); if (resp.get.status == StatusCodes.OK) file.delete()})
   }
@@ -224,7 +240,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   }
 
   private def getStatsOfDay(connection: Connection, stmt: Statement, today: Date): ShopStats = {
-    val res = stmt.executeQuery("SELECT shopcode, countofvisitorstoday, area FROM shopschema.shop;")
+    val res = stmt.executeQuery("SELECT countofvisitorstoday, area FROM shopschema.shop;")
     res.next()
 
     //TODO val preparedStatement = connection.prepareStatement("SELECT count(checkid) as count FROM shopdb.shopschema.Check WHERE date = ?;")
@@ -295,7 +311,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       skuMap = skuMap ++ Map(resultSet.getString("sku") -> resultSet.getInt("count"))
     }
 
-    ShopStats(res.getString("shopcode").toInt, Stats(countOfVisitors, countOfChecks.toInt, CR,
+    ShopStats(shopCode, Stats(countOfVisitors, countOfChecks.toInt, CR,
       countOfSoldUnits.toInt, UPT, totalCostWithTax, totalCostWithoutTax, avgCheck, returnedUnits, salesPerArea, skuPairMap, skuMap))
   }
 
@@ -337,6 +353,7 @@ class ShopActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       val stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
       stmt.execute("REFRESH MATERIALIZED VIEW shopdb.shopschema.items")
+      stmt.execute("REFRESH MATERIALIZED VIEW shopdb.shopschema.card_purchases")
 
       val dayStats = getStatsOfDay(connection, stmt, today)
       val cardsStats = getCardsStats(connection, dayStats.shopCode, today)

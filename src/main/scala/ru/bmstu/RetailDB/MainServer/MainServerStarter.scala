@@ -23,39 +23,62 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
     val serverActor = system.actorOf(Props[ServerActor], "serverActor")
     val dumpActor = system.actorOf(Props[DumpActor], "dumpActor")
 
+    val shopMap = new ShopMap()
+
     val route = {
       post {
         path("stats") {
           entity(as[ShopStats]) {
             stats =>
-              complete {
-                serverActor ! stats
-                HttpResponse(StatusCodes.OK)
+              parameter('msgid.as[Int], 'shopcode.as[Int]) {
+                case (msgID: Int, shopcode: Int) =>
+                  complete {
+                    if (!shopMap.contains(shopcode, msgID)) {
+                      serverActor ! stats
+                      shopMap.put(shopcode, msgID)
+                    }
+                    HttpResponse(StatusCodes.OK)
+                  }
               }
           }
         } ~
           path("stats") {
             entity(as[List[Card]]) {
               stats =>
-                complete {
-                  serverActor ! stats
-                  HttpResponse(StatusCodes.OK)
+                parameter('msgid.as[Int], 'shopcode.as[Int]) {
+                  case (msgID: Int, shopcode: Int) =>
+                    complete {
+                      if (!shopMap.contains(shopcode, msgID)) {
+                        serverActor ! stats
+                        shopMap.put(shopcode, msgID)
+                      }
+                      HttpResponse(StatusCodes.OK)
+                    }
                 }
             }
           } ~
           path("cntrl") {
             entity(as[List[Int]]) { cards =>
-              parameter('WEEK.as[Int], 'MONTH.as[Int], 'YEAR.as[Int], 'shopcode.as[Int]) {
-                case (0, 0, year, shopcode) => complete {
-                  dumpActor ! (0, 0, year, shopcode, cards)
+              parameter('WEEK.as[Int], 'MONTH.as[Int], 'YEAR.as[Int], 'shopcode.as[Int], 'msgid.as[Int]) {
+                case (0, 0, year, shopcode, msgID) => complete {
+                  if (!shopMap.contains(shopcode, msgID)) {
+                    dumpActor ! (0, 0, year, shopcode, cards)
+                    shopMap.put(shopcode, msgID)
+                  }
                   HttpResponse(StatusCodes.OK)
                 }
-                case (week, 0, year, shopcode) => complete {
-                  dumpActor ! (week, 0, year, shopcode, cards)
+                case (week, 0, year, shopcode, msgID) => complete {
+                  if (!shopMap.contains(shopcode, msgID)) {
+                    dumpActor ! (week, 0, year, shopcode, cards)
+                    shopMap.put(shopcode, msgID)
+                  }
                   HttpResponse(StatusCodes.OK)
                 }
-                case (0, month, year, shopcode) => complete {
-                  dumpActor ! (0, month, year, shopcode, cards)
+                case (0, month, year, shopcode, msgID) => complete {
+                  if (!shopMap.contains(shopcode, msgID)) {
+                    dumpActor ! (0, month, year, shopcode, cards)
+                    shopMap.clear(shopcode)
+                  }
                   HttpResponse(StatusCodes.OK)
                 }
               }
