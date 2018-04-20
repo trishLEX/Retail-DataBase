@@ -81,7 +81,7 @@ class Window(QMainWindow):
 
         tabBar.show()
 
-    def shopChooseCardWindow(self):
+    def shopChooseCardWindow(self, start=0):
         tabBar = QTabWidget(self)
 
         tabBar.resize(self.width, self.height)
@@ -99,6 +99,8 @@ class Window(QMainWindow):
 
         back.pressed.connect(lambda: self.shopDefaultWindow(1))
 
+        itemList = self.controller.getShopNames()
+
         tree = QTreeWidget()
         tree.setHeaderLabel("Choose a time period")
 
@@ -109,7 +111,14 @@ class Window(QMainWindow):
         #years = [2015, 2016, 2017, 2018]
         #months = [1, 2, 3, 4, 5]
         #weeks = [1, 2, 3]
-        years, months, weeks = self.controller.getCardTimes()
+        #years, months, weeks = self.controller.getCardTimes()
+
+        years, months, weeks = self.controller.getShopTimes(itemList[start])
+
+        shopList = QComboBox()
+        shopList.addItems(itemList)
+        shopList.setCurrentIndex(start)
+        shopList.currentIndexChanged.connect(lambda: self.shopChooseCardWindow(shopList.currentIndex()))
 
         for year in years:
             child = QTreeWidgetItem(parent)
@@ -134,12 +143,6 @@ class Window(QMainWindow):
             child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
             child.setText(0, str(week))
             child.setCheckState(0, Qt.Unchecked)
-
-        shopList = QComboBox()
-        #itemList = ["Moscow 1","Moscow 2", "Moscow 3"]
-        itemList = self.controller.getShopNames()
-
-        shopList.addItems(itemList)
 
         showTable = QPushButton("Show Table")
         showTable.pressed.connect(lambda: self.showTableCardWindow(
