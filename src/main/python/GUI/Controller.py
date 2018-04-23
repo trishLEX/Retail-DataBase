@@ -30,11 +30,43 @@ class Controller:
             return list
 
     @staticmethod
-    def getShopTimes():
+    def getCommonShopTimes(city):
         with DB(dbname='maindb', host='localhost', port=5432, user='postgres', passwd='0212') as db:
-            years  = [i[0] for i in db.query('SELECT year FROM maindb.shopschema.shops_stats_years').getresult()]
-            months = [i[0] for i in db.query('SELECT month FROM maindb.shopschema.shops_stats_months').getresult()]
-            weeks  = [i[0] for i in db.query('SELECT week FROM maindb.shopschema.shops_stats_weeks').getresult()]
+            if (city != 'The whole company'):
+                years  = [i[0] for i in db.query('SELECT year FROM maindb.shopschema.shops_stats_years '
+                                                 'JOIN MainDB.shopschema.Shops ON shops_stats_years.shopcode = shops.shopcode '
+                                                 'WHERE $1 = city', city).getresult()]
+                months = [i[0] for i in db.query('SELECT month FROM maindb.shopschema.shops_stats_months '
+                                                 'JOIN MainDB.shopschema.Shops ON shops_stats_months.shopcode = shops.shopcode '
+                                                 'WHERE $1 = city', city).getresult()]
+                weeks  = [i[0] for i in db.query('SELECT week FROM maindb.shopschema.shops_stats_weeks '
+                                                 'JOIN MainDB.shopschema.Shops ON shops_stats_weeks.shopcode = shops.shopcode '
+                                                 'WHERE $1 = city', city).getresult()]
+            else:
+                years  = [i[0] for i in db.query('SELECT year FROM maindb.shopschema.shops_stats_years '
+                                                 'JOIN MainDB.shopschema.Shops ON shops_stats_years.shopcode = shops.shopcode '
+                                                 ).getresult()]
+                months = [i[0] for i in db.query('SELECT month FROM maindb.shopschema.shops_stats_months '
+                                                 'JOIN MainDB.shopschema.Shops ON shops_stats_months.shopcode = shops.shopcode '
+                                                 ).getresult()]
+                weeks  = [i[0] for i in db.query('SELECT week FROM maindb.shopschema.shops_stats_weeks '
+                                                 'JOIN MainDB.shopschema.Shops ON shops_stats_weeks.shopcode = shops.shopcode '
+                                                 ).getresult()]
+            print("S", years, months, weeks)
+            return years, months, weeks
+
+    @staticmethod
+    def getShopTimes(shopName):
+        with DB(dbname='maindb', host='localhost', port=5432, user='postgres', passwd='0212') as db:
+            years  = [i[0] for i in db.query('SELECT year FROM maindb.shopschema.shops_stats_years '
+                                             'JOIN MainDB.shopschema.Shops ON shops_stats_years.shopcode = shops.shopcode '
+                                             'WHERE \'{0}\' = shopname'.format(shopName)).getresult()]
+            months = [i[0] for i in db.query('SELECT month FROM maindb.shopschema.shops_stats_months '
+                                             'JOIN MainDB.shopschema.Shops ON shops_stats_months.shopcode = shops.shopcode '
+                                             'WHERE \'{0}\' = shopname'.format(shopName)).getresult()]
+            weeks  = [i[0] for i in db.query('SELECT week FROM maindb.shopschema.shops_stats_weeks '
+                                             'JOIN MainDB.shopschema.Shops ON shops_stats_weeks.shopcode = shops.shopcode '
+                                             'WHERE \'{0}\' = shopname'.format(shopName)).getresult()]
             return years, months, weeks
 
     @staticmethod

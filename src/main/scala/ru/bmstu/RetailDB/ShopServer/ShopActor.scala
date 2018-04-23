@@ -353,7 +353,7 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
       val stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
       stmt.execute("REFRESH MATERIALIZED VIEW shopdb.shopschema.items")
-      stmt.execute("REFRESH MATERIALIZED VIEW shopdb.shopschema.card_purchases")
+      stmt.execute("REFRESH MATERIALIZED VIEW shopdb.shopschema.cards_purchases")
 
       val dayStats = getStatsOfDay(connection, stmt, today)
       val cardsStats = getCardsStats(connection, dayStats.shopCode, today)
