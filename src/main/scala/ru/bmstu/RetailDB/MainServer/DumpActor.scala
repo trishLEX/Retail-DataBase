@@ -224,7 +224,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   }
 
   private def getShopStats(connection: Connection, statement: Statement, shopCode: Int, date: String): String = {
-    val preparedStatement = connection.prepareStatement("SELECT stats->'statsOf" + date + "' AS S FROM MainDB.shopschema.shops WHERE shopCode = ?")
+    val preparedStatement = connection.prepareStatement("SELECT stats->'statsOf%s' AS S FROM MainDB.shopschema.shops WHERE shopCode = ?".format(date))
     preparedStatement.setInt(1, shopCode)
     val resSet = preparedStatement.executeQuery()
     resSet.next()
@@ -233,7 +233,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   }
 
   private def getCardStats(connection: Connection, statement: Statement, cardID: Int, date: String): String = {
-    val preparedStatement = connection.prepareStatement("SELECT stats->'statsOf" + date + "' AS S FROM MainDB.shopschema.card WHERE cardID = ?")
+    val preparedStatement = connection.prepareStatement("SELECT stats->'statsOf%s' AS S FROM MainDB.shopschema.card WHERE cardID = ?".format(date))
     preparedStatement.setInt(1, cardID)
     val resSet = preparedStatement.executeQuery()
     resSet.next()

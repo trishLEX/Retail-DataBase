@@ -142,8 +142,6 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
     try {
       val stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
-      stmt.execute("REFRESH MATERIALIZED VIEW shopdb.shopschema.cards_purchases")
-
       val preparedStatement = connection.prepareStatement("SELECT DISTINCT cardid FROM shopdb.shopschema.cards_purchases WHERE date::date BETWEEN ?::date AND ?::date;")
       preparedStatement.setString(1, from)
       preparedStatement.setString(2, to)
