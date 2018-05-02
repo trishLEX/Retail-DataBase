@@ -572,6 +572,8 @@ class Window(QMainWindow):
         manPairs = QVBoxLayout()
         manPairs.addWidget(manFreqPairsTable)
         manPairs.addWidget(manPairsButton)
+        if len(manFreqPairsList) == 0:
+            manPairsButton.setDisabled(True)
 
         manItemsButton = QPushButton(self.viewDiagramButtonName)
         manItemsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
@@ -582,6 +584,8 @@ class Window(QMainWindow):
         manItems = QVBoxLayout()
         manItems.addWidget(manItemTable)
         manItems.addWidget(manItemsButton)
+        if len(manItemList) == 0:
+            manItemsButton.setDisabled(True)
 
         womanPairsButton = QPushButton(self.viewDiagramButtonName)
         womanPairsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
@@ -592,6 +596,8 @@ class Window(QMainWindow):
         womanPairs = QVBoxLayout()
         womanPairs.addWidget(womanFreqPairsTable)
         womanPairs.addWidget(womanPairsButton)
+        if len(womanFreqPairsList) == 0:
+            womanPairsButton.setDisabled(True)
 
         womanItemsButton = QPushButton(self.viewDiagramButtonName)
         womanItemsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
@@ -602,6 +608,8 @@ class Window(QMainWindow):
         womanItems = QVBoxLayout()
         womanItems.addWidget(womanItemTable)
         womanItems.addWidget(womanItemsButton)
+        if len(womanItemList) == 0:
+            womanItemsButton.setDisabled(True)
 
         itemPairs = QHBoxLayout()
         itemPairs.addLayout(manPairs)
