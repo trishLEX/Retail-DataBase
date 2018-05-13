@@ -2,6 +2,9 @@ from pg import DB
 
 
 class Controller:
+    def __init__(self):
+        self.wholeCompanyStr = "Вся компания"
+
     @staticmethod
     def getShopCode(shopName):
         with DB(dbname='maindb', host='localhost', port=5432, user='postgres', passwd='0212') as db:
@@ -20,10 +23,9 @@ class Controller:
             list = db.query('SELECT shopName FROM maindb.shopschema.shops').getresult()
             return [i[0] for i in list]
 
-    @staticmethod
-    def getCities():
+    def getCities(self):
         with DB(dbname='maindb', host='localhost', port=5432, user='postgres', passwd='0212') as db:
-            list = ['The whole company']
+            list = [self.wholeCompanyStr]
             cities = [i[0] for i in db.query('SELECT DISTINCT city FROM MainDB.shopschema.shops').getresult()]
             for city in cities:
                 list.append(city)
@@ -220,6 +222,11 @@ class Controller:
                 raise RuntimeError("Error time period")
 
         print("CNTRL:", shopStats)
+
+        shopStats = [list(stat) for stat in shopStats]
+        for stat in shopStats:
+            stat[0] = round(stat[0], 3)
+
         return shopStats
 
     def getCommonShopStats(self, years, months=None, weeks=None, city=None):
@@ -273,6 +280,11 @@ class Controller:
                         stats.append(i[0])
 
         stats = [self.__num(i) for i in stats]
+
+        stats = [list(stat) for stat in stats]
+        for stat in stats:
+            stat[0] = round(stat[0], 3)
+
         print("COMMON STATS:", stats, city)
         return stats
 
@@ -333,9 +345,9 @@ class Controller:
             elif months is None and weeks is not None:
                 res = db.query(
                     "SELECT MainDB.shopschema.get_sku_pairs_frequency_week({0}, {1}, '{{{2}}}'::INT[])"
-                        .format(str(shopCode),
-                                str(years[0]),
-                                str(weeks).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+                    .format(str(shopCode),
+                            str(years[0]),
+                            str(weeks).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
 
                 for i in res:
                     if i[0][2] == 'Man':
@@ -386,8 +398,8 @@ class Controller:
                 elif months is not None and weeks is None:
                     res = db.query(
                         "SELECT MainDB.shopschema.get_common_sku_pairs_frequency_month({0}, '{{{1}}}'::INT[])"
-                            .format(str(years[0]),
-                                    str(months).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+                        .format(str(years[0]),
+                                str(months).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
 
                     for i in res:
                         if i[0][2] == 'Man':
@@ -451,9 +463,9 @@ class Controller:
                 elif months is not None and weeks is None:
                     res = db.query(
                         "SELECT MainDB.shopschema.get_common_sku_pairs_frequency_month({0}, '{{{1}}}'::INT[], {2})"
-                            .format(str(years).replace('[', '').replace(']', '').replace('\'', ''),
-                                    str(months).replace('[', '').replace(']', '').replace('\'', ''),
-                                    str(city))).getresult()
+                        .format(str(years).replace('[', '').replace(']', '').replace('\'', ''),
+                                str(months).replace('[', '').replace(']', '').replace('\'', ''),
+                                str(city))).getresult()
 
                     for i in res:
                         if i[0][2] == 'Man':
