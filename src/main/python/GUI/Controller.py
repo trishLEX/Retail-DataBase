@@ -235,22 +235,22 @@ class Controller:
             if city is None:
                 if months is None and weeks is None:
                     res = db.query("SELECT MainDB.shopschema.get_city_shop_stats_year('{{{0}}}'::INT[])"
-                                   .format(str(years).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+                                     .format(str(years).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
 
                     for i in res:
                         stats.append(i[0])
 
                 elif months is not None and weeks is None:
                     res = db.query("SELECT MainDB.shopschema.get_city_shop_stats_month({0}, '{{{1}}}'::INT[])"
-                                   .format(str(years[0]),
-                                           str(months).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+                                     .format(str(years[0]),
+                                             str(months).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
                     for i in res:
                         stats.append(i[0])
 
                 elif months is None and weeks is not None:
                     res = db.query("SELECT MainDB.shopschema.get_city_shop_stats_week({0}, '{{{1}}}'::INT[])"
-                                   .format(str(years[0]),
-                                           str(weeks).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
+                                     .format(str(years[0]),
+                                             str(weeks).replace('[', '').replace(']', '').replace('\'', ''))).getresult()
                     for i in res:
                         stats.append(i[0])
 

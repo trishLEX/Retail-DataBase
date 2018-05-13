@@ -21,6 +21,49 @@ class Window(QMainWindow):
         self.currentShopTab = None
         self.currentCardTab = None
 
+        self.shopsTabName = "Магазины"
+        self.cardsTabName = "Карты"
+        self.backButtonName = "Назад"
+        self.commonStatsName = "Общая статистика по магазинам"
+        self.shopsStatsName = "Статистика по магазинам"
+        self.cardsStatsName = "Статистика по картам"
+        self.chooseTimrStr = "Выюерете преиод времени"
+        self.yearsStr = "Года"
+        self.yearStr = "Год"
+        self.monthsStr = "Месяцы"
+        self.monthStr = "Месяц"
+        self.weeksStr = "Недели"
+        self.weekStr = "Неделя"
+        self.showTableStr = "Показать таблицу"
+        self.cardStatsLables = ["Количество чеков с картами",
+                                "Отношение количества чеоков с картами к общему числу чеков",
+                                "Общая сумма продаж в чеках с картами",
+                                "Отношение общей суммы продаж в чеках с картами к сумме во всех чеках"]
+        # labels = ["Conversion", "Units per transaction",
+        #           "Average check", "Sales per area", "Count of checks", "Returned units", "Count of visitors",
+        #           "Proceeds without tax", "Proceeds with tax", "Count of sold units"]
+        self.shopStatsLabels = ["Конверсия", "Среднее число товаров в чеке", "Средний чек", "Продажи с кв. метра",
+                                "Количество чеков", "Количество возвратов", "Число посетителей", "Доход с НДС",
+                                "Доход без НДС", "Число проданных товаров"]
+        self.itemPairsLabels = ["Товар №1", "Товар №2", "Частота"]
+        self.itemLabels = ["Товар", "Частота"]
+        self.frequencyStr = "Частота"
+        self.countStr = "Количество"
+        self.manLabel = "Мужчины"
+        self.womanLabel = "Женщины"
+
+        self.chooseIndexStr = "Выберете показатель:"
+
+        self.chooseDirectoryStr = "Выберете папку"
+        self.chooseNameStr = "Выберете имя"
+        self.enterPngNameStr = "Введите имя .png файла"
+        self.enterExcelNameStr = "Введите имя .xlsx файла"
+        self.fileNameNotChosenMsg = "Имя файла не выбрано"
+
+        self.toExcelButtonName = "Сохранить в .xlsx файл"
+        self.viewDiagramButtonName = "Посмотреть диаграмму"
+        self.toPngButtonName = "Сохранить в .png файл"
+
         self.controller = Controller.Controller()
 
         self.initUi()
@@ -45,8 +88,8 @@ class Window(QMainWindow):
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
         tab2 = QWidget()
-        tabBar.addTab(tab1, "Shops")
-        tabBar.addTab(tab2, "Cards")
+        tabBar.addTab(tab1, self.shopsTabName)
+        tabBar.addTab(tab2, self.cardsTabName)
 
         if activeTab == 0:
             self.currentShopTab = [tab1]
@@ -57,8 +100,8 @@ class Window(QMainWindow):
 
         tabBar.setCurrentIndex(activeTab)
 
-        commonStats1 = QPushButton("Show common statistics")
-        shopStats1 = QPushButton("Show shop statistics")
+        commonStats1 = QPushButton(self.commonStatsName)
+        shopStats1 = QPushButton(self.shopsStatsName)
 
         shopStats1.pressed.connect(lambda: self.shopChooseShopWindow(False))
         commonStats1.pressed.connect(lambda: self.shopChooseShopWindow(True))
@@ -68,7 +111,7 @@ class Window(QMainWindow):
         vbox1.addWidget(commonStats1)
         vbox1.addStretch()
 
-        shopStats2 = QPushButton("Show card statistics")
+        shopStats2 = QPushButton(self.cardsStatsName)
 
         shopStats2.pressed.connect(lambda: self.shopChooseCardWindow())
 
@@ -87,14 +130,14 @@ class Window(QMainWindow):
         tabBar.resize(self.width, self.height)
         tab1 = self.currentShopTab
         tab2 = QWidget()
-        tabBar.addTab(tab1, "Shops")
-        tabBar.addTab(tab2, "Cards")
+        tabBar.addTab(tab1, self.shopsTabName)
+        tabBar.addTab(tab2, self.cardsTabName)
 
         tabBar.setCurrentIndex(1)
 
         self.currentCardTab = tab2
 
-        back = QPushButton("Back")
+        back = QPushButton(self.backButtonName)
         back.setFixedWidth(50)
 
         back.pressed.connect(lambda: self.shopDefaultWindow(1))
@@ -102,11 +145,11 @@ class Window(QMainWindow):
         itemList = self.controller.getShopNames()
 
         tree = QTreeWidget()
-        tree.setHeaderLabel("Choose a time period")
+        tree.setHeaderLabel(self.chooseTimrStr)
 
         parent = QTreeWidgetItem(tree)
 
-        parent.setText(0, "Years")
+        parent.setText(0, self.yearsStr)
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
         #years = [2015, 2016, 2017, 2018]
         #months = [1, 2, 3, 4, 5]
@@ -127,7 +170,7 @@ class Window(QMainWindow):
             child.setCheckState(0, Qt.Unchecked)
 
         parent = QTreeWidgetItem(tree)
-        parent.setText(0, "Months")
+        parent.setText(0, self.monthsStr)
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
         for month in months:
             child = QTreeWidgetItem(parent)
@@ -136,7 +179,7 @@ class Window(QMainWindow):
             child.setCheckState(0, Qt.Unchecked)
 
         parent = QTreeWidgetItem(tree)
-        parent.setText(0, "Weeks")
+        parent.setText(0, self.weeksStr)
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
         for week in weeks:
             child = QTreeWidgetItem(parent)
@@ -144,7 +187,7 @@ class Window(QMainWindow):
             child.setText(0, str(week))
             child.setCheckState(0, Qt.Unchecked)
 
-        showTable = QPushButton("Show Table")
+        showTable = QPushButton(self.showTableStr)
         showTable.pressed.connect(lambda: self.showTableCardWindow(
             itemList[shopList.currentIndex()],
             [item for item in tree.topLevelItem(0).takeChildren() if item.checkState(0) > 0],
@@ -191,17 +234,17 @@ class Window(QMainWindow):
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
         tab2 = self.currentCardTab
-        tabBar.addTab(tab1, "Shops")
-        tabBar.addTab(tab2, "Cards")
+        tabBar.addTab(tab1, self.shopsTabName)
+        tabBar.addTab(tab2, self.cardsTabName)
 
         self.currentShopTab = tab1
 
-        back = QPushButton("Back")
+        back = QPushButton(self.backButtonName)
         back.setFixedWidth(50)
         back.pressed.connect(lambda: self.shopDefaultWindow(0))
 
         tree = QTreeWidget()
-        tree.setHeaderLabel("Choose a time period")
+        tree.setHeaderLabel(self.chooseTimrStr)
 
         if isCommon:
             #itemList = ["The whole company", "Moscow", "St. Petersburg", "Riga"]
@@ -211,7 +254,7 @@ class Window(QMainWindow):
             itemList = self.controller.getShopNames()
 
         parent = QTreeWidgetItem(tree)
-        parent.setText(0, "Years")
+        parent.setText(0, self.yearsStr)
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
         #years = [2015, 2016, 2017, 2018]
         #months = [1, 2, 3, 4, 5]
@@ -234,7 +277,7 @@ class Window(QMainWindow):
             child.setCheckState(0, Qt.Unchecked)
 
         parent = QTreeWidgetItem(tree)
-        parent.setText(0, "Months")
+        parent.setText(0, self.monthsStr)
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
         for month in months:
             child = QTreeWidgetItem(parent)
@@ -243,7 +286,7 @@ class Window(QMainWindow):
             child.setCheckState(0, Qt.Unchecked)
 
         parent = QTreeWidgetItem(tree)
-        parent.setText(0, "Weeks")
+        parent.setText(0, self.weeksStr)
         parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
         for week in weeks:
             child = QTreeWidgetItem(parent)
@@ -251,7 +294,7 @@ class Window(QMainWindow):
             child.setText(0, str(week))
             child.setCheckState(0, Qt.Unchecked)
 
-        showTable = QPushButton("Show Table")
+        showTable = QPushButton(self.showTableStr)
         showTable.pressed.connect(lambda: self.showTableShopWindow(
             itemList[shopList.currentIndex()],
             [item for item in tree.topLevelItem(0).takeChildren() if item.checkState(0) > 0],
@@ -306,29 +349,29 @@ class Window(QMainWindow):
         tabBar.resize(self.width, self.height)
         tab1 = self.currentShopTab
         tab2 = QWidget()
-        tabBar.addTab(tab1, "Shops")
-        tabBar.addTab(tab2, "Cards")
+        tabBar.addTab(tab1, self.shopsTabName)
+        tabBar.addTab(tab2, self.cardsTabName)
 
         self.currentCardTab = tab2
 
         tabBar.setCurrentIndex(1)
 
-        back = QPushButton("Back")
+        back = QPushButton(self.backButtonName)
         back.setFixedWidth(50)
         back.pressed.connect(lambda: self.shopChooseCardWindow())
 
         if len(months) != 0 and len(weeks) == 0:
             dates = [month.text(0) for month in months]
             stats = self.controller.getCardStats(shopCode, years=[years[0].text(0)], months=dates)
-            time = "Month"
+            time = self.monthStr
         elif len(months) == 0 and len(weeks) != 0:
             dates = [week.text(0) for week in weeks]
             stats = self.controller.getCardStats(shopCode, years=[years[0].text(0)], weeks=dates)
-            time = "Week"
+            time = self.weekStr
         else:
             dates = [year.text(0) for year in years]
             stats = self.controller.getCardStats(shopCode, years=dates)
-            time = "Year"
+            time = self.yearStr
 
         print("DATES:", dates)
 
@@ -338,13 +381,8 @@ class Window(QMainWindow):
         # 1 - Количество чеков по картам, 2 - их % от общего числа чеков, 3 - totalSum по картам, 4 - % от общего totalSum
         table.setRowCount(4)
 
-        labels = ["A number of checks with cards",
-                  "The ratio of the number of checks with cards to the number of all checks",
-                  "Total sum in checks with cards",
-                  "The ratio of the total sum in checks with cards to the whole sum"]
-
         table.setHorizontalHeaderLabels(dates)
-        table.setVerticalHeaderLabels(labels)
+        table.setVerticalHeaderLabels(self.cardStatsLables)
         header = table.horizontalHeader()
         header.setFrameStyle(QFrame.Box | QFrame.Plain)
         header.setLineWidth(1)
@@ -361,11 +399,11 @@ class Window(QMainWindow):
         table.resizeRowsToContents()
         table.horizontalHeader().setStretchLastSection(True)
 
-        toExcel = QPushButton("To Excel")
-        toExcel.pressed.connect(lambda: self.toExcelCard(stats, dates, labels, time))
+        toExcel = QPushButton(self.toExcelButtonName)
+        toExcel.pressed.connect(lambda: self.toExcelCard(stats, dates, self.cardLabels, time))
 
-        diagram = QPushButton("View Diagram")
-        diagram.pressed.connect(lambda: self.viewCardDiagram(stats, dates, labels, shopName, years, months, weeks))
+        diagram = QPushButton(self.viewDiagramButtonName)
+        diagram.pressed.connect(lambda: self.viewCardDiagram(stats, dates, self.cardStatsLables, shopName, years, months, weeks))
 
         vbox = QVBoxLayout(tab2)
         vbox.addWidget(QLabel(shopName))
@@ -382,7 +420,7 @@ class Window(QMainWindow):
 
         if not isCommon:
             shopCode = self.controller.getShopCode(shopName)
-        elif shopName != 'The whole company':
+        elif shopName != self.controller.wholeCompanyStr:
             city = self.controller.getCityCode(shopName)
             print("city:", city)
         else:
@@ -397,12 +435,12 @@ class Window(QMainWindow):
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
         tab2 = self.currentCardTab
-        tabBar.addTab(tab1, "Shops")
-        tabBar.addTab(tab2, "Cards")
+        tabBar.addTab(tab1, self.shopsTabName)
+        tabBar.addTab(tab2, self.cardsTabName)
 
         self.currentShopTab = tab1
 
-        back = QPushButton("Back")
+        back = QPushButton(self.backButtonName)
         back.setFixedWidth(50)
         back.pressed.connect(lambda: self.shopChooseShopWindow(isCommon))
 
@@ -410,28 +448,28 @@ class Window(QMainWindow):
             if len(months) != 0 and len(weeks) == 0:
                 dates = [month.text(0) for month in months]
                 stats = self.controller.getShopStats(shopCode, years=[years[0].text(0)], months=dates)
-                time = "Month"
+                time = self.monthStr
             elif len(months) == 0 and len(weeks) != 0:
                 dates = [week.text(0) for week in weeks]
                 stats = self.controller.getShopStats(shopCode, years=[years[0].text(0)], weeks=dates)
-                time = "Week"
+                time = self.weekStr
             else:
                 dates = [year.text(0) for year in years]
                 stats = self.controller.getShopStats(shopCode, years=dates)
-                time = "Year"
+                time = self.yearStr
         else:
             if len(months) != 0 and len(weeks) == 0:
                 dates = [month.text(0) for month in months]
                 stats = self.controller.getCommonShopStats(years=[years[0].text(0)], months=dates, city=city)
-                time = "Month"
+                time = self.monthStr
             elif len(months) == 0 and len(weeks) != 0:
                 dates = [week.text(0) for week in weeks]
                 stats = self.controller.getCommonShopStats(years=[years[0].text(0)], weeks=dates, city=city)
-                time = "Week"
+                time = self.weekStr
             else:
                 dates = [year.text(0) for year in years]
                 stats = self.controller.getCommonShopStats(years=dates, city=city)
-                time = "Year"
+                time = self.yearStr
 
         print("DATES", dates)
 
@@ -439,12 +477,7 @@ class Window(QMainWindow):
         table.setColumnCount(10)
         table.setRowCount(len(dates))
 
-
-        labels = ["Conversion", "Units per transaction",
-                  "Average check", "Sales per area", "Count of checks", "Returned units", "Count of visitors",
-                  "Proceeds without tax", "Proceeds with tax", "Count of sold units"]
-
-        table.setHorizontalHeaderLabels(labels)
+        table.setHorizontalHeaderLabels(self.shopStatsLabels)
         table.setVerticalHeaderLabels(dates)
         header = table.horizontalHeader()
         header.setFrameStyle(QFrame.Box | QFrame.Plain)
@@ -461,13 +494,9 @@ class Window(QMainWindow):
         table.resizeRowsToContents()
         table.horizontalHeader().setStretchLastSection(True)
 
-        diagram = QPushButton("View Diagram")
+        diagram = QPushButton(self.viewDiagramButtonName)
         diagram.pressed.connect(
-            lambda: self.viewShopDiagram(stats, dates, labels, shopName, years, months, weeks, isCommon))
-
-        itemPairsLabels = ["First Item", "Second Item", "Frequency"]
-        ItemLabels = ["Item", "Count"]
-
+            lambda: self.viewShopDiagram(stats, dates, self.shopStatsLabels, shopName, years, months, weeks, isCommon))
 
         if isCommon:
             if len(months) != 0 and len(weeks) == 0:
@@ -495,14 +524,14 @@ class Window(QMainWindow):
                 manFreqPairsList, manItemList, womanFreqPairsList, womanItemList = \
                     self.controller.getShopFreqStats(shopCode, years=dates)
 
-        toExcel = QPushButton("To Excel")
-        toExcel.pressed.connect(lambda: self.toExcelShop(stats, dates, labels, time,
+        toExcel = QPushButton(self.toExcelButtonName)
+        toExcel.pressed.connect(lambda: self.toExcelShop(stats, dates, self.shopStatsLabels, time,
                                                          manFreqPairsList, manItemList, womanFreqPairsList, womanItemList))
 
         manFreqPairsTable = QTableWidget()
         manFreqPairsTable.setRowCount(len(manFreqPairsList)) #TODO брать первые 5 пар или все, но в пределах разумного
         manFreqPairsTable.setColumnCount(3)
-        manFreqPairsTable.setHorizontalHeaderLabels(itemPairsLabels)
+        manFreqPairsTable.setHorizontalHeaderLabels(self.itemPairsLabels)
         for i in range(len(manFreqPairsList)):
             for j in range(3):
                 manFreqPairsTable.setItem(i, j, QTableWidgetItem(str(manFreqPairsList[i][j])))
@@ -513,7 +542,7 @@ class Window(QMainWindow):
         manItemTable = QTableWidget()
         manItemTable.setRowCount(len(manItemList))
         manItemTable.setColumnCount(2)
-        manItemTable.setHorizontalHeaderLabels(ItemLabels)
+        manItemTable.setHorizontalHeaderLabels(self.itemLabels)
         for i in range(len(manItemList)):
             for j in range(2):
                 manItemTable.setItem(i, j, QTableWidgetItem(str(manItemList[i][j])))
@@ -521,7 +550,7 @@ class Window(QMainWindow):
         womanItemTable = QTableWidget()
         womanItemTable.setRowCount(len(womanItemList))
         womanItemTable.setColumnCount(2)
-        womanItemTable.setHorizontalHeaderLabels(ItemLabels)
+        womanItemTable.setHorizontalHeaderLabels(self.itemLabels)
         for i in range(len(womanItemList)):
             for j in range(2):
                 womanItemTable.setItem(i, j, QTableWidgetItem(str(womanItemList[i][j])))
@@ -529,50 +558,58 @@ class Window(QMainWindow):
         womanFreqPairsTable = QTableWidget()
         womanFreqPairsTable.setRowCount(len(womanFreqPairsList)) #TODO брать первые 5 пар
         womanFreqPairsTable.setColumnCount(3)
-        womanFreqPairsTable.setHorizontalHeaderLabels(itemPairsLabels)
+        womanFreqPairsTable.setHorizontalHeaderLabels(self.itemPairsLabels)
         for i in range(len(womanFreqPairsList)):
             for j in range(3):
                 womanFreqPairsTable.setItem(i, j, QTableWidgetItem(str(womanFreqPairsList[i][j])))
 
-        manPairsButton = QPushButton("View Diagram")
+        manPairsButton = QPushButton(self.viewDiagramButtonName)
         manPairsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
             [i[2] for i in manFreqPairsList],
             ["(" + str(i[0]) + "," + str(i[1]) + ")" for i in manFreqPairsList],
-            shopName, years, months, weeks, isCommon, "Frequency"
+            shopName, years, months, weeks, isCommon, self.frequencyStr
         ))
         manPairs = QVBoxLayout()
         manPairs.addWidget(manFreqPairsTable)
         manPairs.addWidget(manPairsButton)
+        if len(manFreqPairsList) == 0:
+            manPairsButton.setDisabled(True)
 
-        manItemsButton = QPushButton("View Diagram")
+        manItemsButton = QPushButton(self.viewDiagramButtonName)
         manItemsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
             [i[1] for i in manItemList],
             [str(i[0]) for i in manItemList],
-            shopName, years, months, weeks, isCommon, "Count"
+            shopName, years, months, weeks, isCommon, self.countStr
         ))
         manItems = QVBoxLayout()
         manItems.addWidget(manItemTable)
         manItems.addWidget(manItemsButton)
+        if len(manItemList) == 0:
+            manItemsButton.setDisabled(True)
 
-        womanPairsButton = QPushButton("View Diagram")
+        womanPairsButton = QPushButton(self.viewDiagramButtonName)
         womanPairsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
             [i[2] for i in womanFreqPairsList],
             ["(" + str(i[0]) + "," + str(i[1]) + ")" for i in womanFreqPairsList],
-            shopName, years, months, weeks, isCommon, "Frequency"
+            shopName, years, months, weeks, isCommon, self.frequencyStr
         ))
         womanPairs = QVBoxLayout()
         womanPairs.addWidget(womanFreqPairsTable)
         womanPairs.addWidget(womanPairsButton)
+        if len(womanFreqPairsList) == 0:
+            womanPairsButton.setDisabled(True)
 
-        womanItemsButton = QPushButton("View Diagram")
+        womanItemsButton = QPushButton(self.viewDiagramButtonName)
         womanItemsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
             [i[1] for i in womanItemList],
             [str(i[0]) for i in womanItemList],
-            shopName, years, months, weeks, isCommon, "Count"
+            shopName, years, months, weeks, isCommon, self.countStr
         ))
         womanItems = QVBoxLayout()
         womanItems.addWidget(womanItemTable)
         womanItems.addWidget(womanItemsButton)
+        if len(womanItemList) == 0:
+            womanItemsButton.setDisabled(True)
 
         itemPairs = QHBoxLayout()
         itemPairs.addLayout(manPairs)
@@ -581,8 +618,8 @@ class Window(QMainWindow):
         itemPairs.addLayout(womanItems)
 
         manWomanLabel = QHBoxLayout()
-        manWomanLabel.addWidget(QLabel("Man"))
-        manWomanLabel.addWidget(QLabel("Woman"))
+        manWomanLabel.addWidget(QLabel(self.manLabel))
+        manWomanLabel.addWidget(QLabel(self.womanLabel))
 
         vbox = QVBoxLayout(tab1)
         vbox.addWidget(QLabel(shopName))
@@ -644,17 +681,17 @@ class Window(QMainWindow):
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
         tab2 = self.currentCardTab
-        tabBar.addTab(tab1, "Shops")
-        tabBar.addTab(tab2, "Cards")
+        tabBar.addTab(tab1, self.shopsTabName)
+        tabBar.addTab(tab2, self.cardsTabName)
 
         self.currentShopTab = tab1
 
         pic = drawPlot()
 
-        toFile = QPushButton("Save to file")
+        toFile = QPushButton(self.toPngButtonName)
         toFile.pressed.connect(lambda: self.toFile(currentShopPlot))
 
-        back = QPushButton("Back")
+        back = QPushButton(self.backButtonName)
         back.setFixedWidth(50)
         back.pressed.connect(lambda: self.showTableShopWindow(shopName, years, months, days, isCommon))
 
@@ -719,8 +756,8 @@ class Window(QMainWindow):
         tabBar.resize(self.width, self.height)
         tab1 = self.currentShopTab
         tab2 = QWidget()
-        tabBar.addTab(tab1, "Shops")
-        tabBar.addTab(tab2, "Cards")
+        tabBar.addTab(tab1, self.shopsTabName)
+        tabBar.addTab(tab2, self.cardsTabName)
 
         tabBar.setCurrentIndex(1)
 
@@ -728,7 +765,7 @@ class Window(QMainWindow):
 
         pic = drawPlot(indexOfParameter)
 
-        chooseLabel = QLabel("Choose an index:")
+        chooseLabel = QLabel(self.chooseIndexStr)
         chooseBox = QComboBox()
         chooseBox.addItems(labels)
 
@@ -740,11 +777,11 @@ class Window(QMainWindow):
         chooseBox.currentIndexChanged.connect(
             lambda: {hbox.insertWidget(0, drawPlot(chooseBox.currentIndex())), hbox.takeAt(1)})
 
-        back = QPushButton("Back")
+        back = QPushButton(self.backButtonName)
         back.setFixedWidth(50)
         back.pressed.connect(lambda: self.showTableCardWindow(shopName, years, months, days))
 
-        toFile = QPushButton("Save to file")
+        toFile = QPushButton(self.toPngButtonName)
         toFile.pressed.connect(lambda: self.toFile(currentCardPlot))
 
         vbox = QVBoxLayout(tab2)
@@ -780,7 +817,7 @@ class Window(QMainWindow):
 
             buf = io.BytesIO()
 
-            gcf().set_size_inches(10.0, 6.4)
+            gcf().set_size_inches(9.0, 6.0)
 
             savefig(buf, format='png', dpi=100)
             buf.seek(0)
@@ -805,14 +842,14 @@ class Window(QMainWindow):
         tabBar.resize(self.width, self.height)
         tab1 = QWidget()
         tab2 = self.currentCardTab
-        tabBar.addTab(tab1, "Shops")
-        tabBar.addTab(tab2, "Cards")
+        tabBar.addTab(tab1, self.shopsTabName)
+        tabBar.addTab(tab2, self.cardsTabName)
 
         self.currentShopTab = tab1
 
         pic = drawPlot(numberOfKPI)
 
-        chooseLabel = QLabel("Choose an index:")
+        chooseLabel = QLabel(self.chooseIndexStr)
         chooseBox = QComboBox()
         chooseBox.addItems(labels)
 
@@ -823,11 +860,11 @@ class Window(QMainWindow):
 
         chooseBox.currentIndexChanged.connect(lambda: {hbox.insertWidget(0, drawPlot(chooseBox.currentIndex())), hbox.takeAt(1)})
 
-        back = QPushButton("Back")
+        back = QPushButton(self.backButtonName)
         back.setFixedWidth(50)
         back.pressed.connect(lambda: self.showTableShopWindow(shopName, years, months, days, isCommon))
 
-        toFile = QPushButton("Save to file")
+        toFile = QPushButton(self.toPngButtonName)
         toFile.pressed.connect(lambda: self.toFile(currentShopPlot))
 
         vbox = QVBoxLayout(tab1)
@@ -839,39 +876,39 @@ class Window(QMainWindow):
         tabBar.show()
 
     def toFile(self, plot):
-        path = QFileDialog().getExistingDirectory(self, 'Choose a directory')
+        path = QFileDialog().getExistingDirectory(self, self.chooseDirectoryStr)
 
         if path:
 
-            text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.png to save:')
+            text, ok = QInputDialog.getText(self, self.chooseNameStr, self.enterPngNameStr)
 
             while text == "" and ok:
                 error = QMessageBox()
                 error.setIcon(QMessageBox.Critical)
-                error.setText("File's name is not chosen!")
+                error.setText(self.fileNameNotChosenMsg)
                 error.setStandardButtons(QMessageBox.Ok)
                 error.exec_()
 
-                text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.png to save:')
+                text, ok = QInputDialog.getText(self, self.chooseNameStr, self.enterPngNameStr)
 
             if ok:
                 plot.save(path + '/' + text + ".png")
 
     def toExcelShop(self, stats, dates, labels, timeName, manFreqPairsList, manItemList, womanFreqPairsList, womanItemList):
-        path = QFileDialog().getExistingDirectory(self, 'Choose a directory')
+        path = QFileDialog().getExistingDirectory(self, self.chooseDirectoryStr)
 
         if path:
 
-            text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.xlsx to save:')
+            text, ok = QInputDialog.getText(self, self.chooseNameStr, self.enterExcelNameStr)
 
             while text == "" and ok:
                 error = QMessageBox()
                 error.setIcon(QMessageBox.Critical)
-                error.setText("File's name is not chosen!")
+                error.setText(self.fileNameNotChosenMsg)
                 error.setStandardButtons(QMessageBox.Ok)
                 error.exec_()
 
-                text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.xlsx to save:')
+                text, ok = QInputDialog.getText(self, self.chooseNameStr, self.enterExcelNameStr)
 
             if ok:
                 fileStats = openpyxl.Workbook()
@@ -938,20 +975,20 @@ class Window(QMainWindow):
                 fileStats.save(path + '/' + text + ".xlsx")
 
     def toExcelCard(self, stats, dates, labels, timeName):
-        path = QFileDialog().getExistingDirectory(self, 'Choose a directory')
+        path = QFileDialog().getExistingDirectory(self, self.chooseDirectoryStr)
 
         if path:
 
-            text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.xlsx to save:')
+            text, ok = QInputDialog.getText(self, self.chooseNameStr, self.enterExcelNameStr)
 
             while text == "" and ok:
                 error = QMessageBox()
                 error.setIcon(QMessageBox.Critical)
-                error.setText("File's name is not chosen!")
+                error.setText(self.fileNameNotChosenMsg)
                 error.setStandardButtons(QMessageBox.Ok)
                 error.exec_()
 
-                text, ok = QInputDialog.getText(self, 'Choose a name', 'Enter name of file.xlsx to save:')
+                text, ok = QInputDialog.getText(self, self.chooseNameStr, self.enterExcelNameStr)
 
             if ok:
                 fileStats = openpyxl.Workbook()
