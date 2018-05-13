@@ -185,6 +185,10 @@ class Controller:
             else:
                 raise RuntimeError("Error time period")
 
+        for stat in res:
+            stat[2] = round(stat[2], 3)
+            stat[3] = round(stat[3], 3)
+
         return res
 
     @staticmethod
