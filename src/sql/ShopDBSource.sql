@@ -1,6 +1,8 @@
+CREATE DATABASE ShopDB;
 CREATE SCHEMA ShopSchema;
 
 SET SEARCH_PATH = 'shopschema';
+--SET LC_MONETARY TO 'Russian_Russia.1251';
 CREATE EXTENSION IF NOT EXISTS dblink;
 
 CREATE TYPE shopdb.shopschema.COLOR AS ENUM
@@ -95,7 +97,7 @@ CREATE TABLE IF NOT EXISTS ShopDB.shopschema.Employee
 CREATE TABLE IF NOT EXISTS ShopDB.shopschema.Check
 (
   checkID INT PRIMARY KEY NOT NULL DEFAULT nextval('ShopDB.shopschema.check_codes'),
-  date TIMESTAMP WITH TIME ZONE NOT NULL UNIQUE ,
+  date TIMESTAMP NOT NULL UNIQUE ,
   totalCostWithTax MONEY NOT NULL,
   totalCostWithoutTax MONEY NOT NULL,
   isByCard BOOLEAN NOT NULL DEFAULT FALSE,
@@ -210,11 +212,25 @@ CREATE TABLE IF NOT EXISTS ShopDB.shopschema.Check_Item_INT
   FOREIGN KEY (itemID, sku) REFERENCES shopdb.shopschema.Item (itemID, sku)
 );
 
+-- CREATE TABLE IF NOT EXISTS ShopDB.shopschema.Card
+-- (
+--   cardID INT PRIMARY KEY NOT NULL,
+--   phone CHAR(11) NOT NULL UNIQUE,
+--   firstName VARCHAR(25) NOT NULL,
+--   lastName VARCHAR(25) NOT NULL,
+--   discount SMALLINT NOT NULL DEFAULT 5,
+--   sex SEX NOT NULL,
+--   email VARCHAR(50),
+--   isWorker BOOLEAN,
+--   dateOfBirth DATE NOT NULL,
+--   city VARCHAR(50) NOT NULL
+-- );
+
 CREATE TABLE IF NOT EXISTS ShopDB.shopschema.Card_Check_INT
 (
   checkID INT NOT NULL ,
   cardID INT NOT NULL ,
-  purchases INT[][2] NOT NULL ,
+  purchases INT[][2] NOT NULL , --возможно сделать связь многие ко многим с item
 
   PRIMARY KEY (checkID, cardID),
 
@@ -224,21 +240,21 @@ CREATE TABLE IF NOT EXISTS ShopDB.shopschema.Card_Check_INT
 CREATE OR REPLACE FUNCTION shopdb.shopschema.update_shop() RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.shopcode != OLD.shopcode OR
-     NEW.shopname != OLD.shopname OR
-     NEW.isoutlet != OLD.isoutlet OR
-     NEW.address != OLD.address OR
-     NEW.city != OLD.city OR
-     NEW.isclosed != OLD.isclosed OR
-     NEW.area != OLD.area THEN
-    RAISE EXCEPTION 'trying to update non-updateble field';
+    NEW.shopname != OLD.shopname OR
+    NEW.isoutlet != OLD.isoutlet OR
+    NEW.address != OLD.address OR
+    NEW.city != OLD.city OR
+    NEW.isclosed != OLD.isclosed OR
+    NEW.area != OLD.area THEN
+      RAISE EXCEPTION 'trying to update non-updateble field';
   END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_update_shop BEFORE UPDATE
-  ON ShopDB.shopschema.Shop
-  FOR EACH ROW
+ON ShopDB.shopschema.Shop
+FOR EACH ROW
 EXECUTE PROCEDURE ShopDB.shopschema.update_shop();
 
 CREATE OR REPLACE FUNCTION shopdb.shopschema.insert_shop() RETURNS TRIGGER AS $$
@@ -247,7 +263,7 @@ BEGIN
     RAISE EXCEPTION 'trying to insert more than one row in table shop';
   ELSEIF (new.shopcode, new.shopname, new.isoutlet, new.address, new.city, new.area) NOT IN
          (SELECT * FROM dblink('dbname=maindb port=5432 user=postgres password=0212', 'SELECT shopCode, shopName, isoutlet, address, city, area FROM ShopSchema.shops')
-           AS shops(shopCode INT, shopname VARCHAR(25), isoutlet BOOLEAN, address VARCHAR(25), city VARCHAR(50), area FLOAT)) THEN
+    AS shops(shopCode INT, shopname VARCHAR(25), isoutlet BOOLEAN, address VARCHAR(25), city VARCHAR(50), area FLOAT)) THEN
     RAISE EXCEPTION 'invalid shopcode';
   END IF;
   RETURN NEW;
@@ -255,19 +271,19 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_insert_shop BEFORE INSERT
-  ON shopdb.shopschema.Shop
-  FOR EACH ROW
+ON shopdb.shopschema.Shop
+FOR EACH ROW
 EXECUTE PROCEDURE ShopDB.shopschema.insert_shop();
 
 CREATE OR REPLACE FUNCTION shopdb.shopschema.delete_shop() RETURNS TRIGGER AS $$
 BEGIN
-  RAISE EXCEPTION 'trying to delete row in shop';
+RAISE EXCEPTION 'trying to delete row in shop';
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_delete_shop BEFORE DELETE
-  ON shopdb.shopschema.Shop
-  FOR EACH ROW
+ON shopdb.shopschema.Shop
+FOR EACH ROW
 EXECUTE PROCEDURE shopdb.shopschema.delete_shop();
 
 CREATE OR REPLACE FUNCTION shopdb.shopschema.delete_empl() RETURNS TRIGGER AS $$
@@ -278,8 +294,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_delete_emp BEFORE DELETE
-  ON shopdb.shopschema.Employee
-  FOR EACH ROW
+ON shopdb.shopschema.Employee
+FOR EACH ROW
 EXECUTE PROCEDURE shopdb.shopschema.delete_empl();
 
 CREATE OR REPLACE FUNCTION shopdb.shopschema.insert_item_type() RETURNS TRIGGER AS $$
@@ -293,8 +309,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_insert_item_type BEFORE INSERT
-  ON shopdb.shopschema.ItemType
-  FOR EACH ROW
+ON shopdb.shopschema.ItemType
+FOR EACH ROW
 EXECUTE PROCEDURE shopdb.shopschema.insert_item_type();
 
 CREATE OR REPLACE FUNCTION item_id_check(itemid INT, size SMALLINT, color Color) RETURNS BOOLEAN AS $$
@@ -360,8 +376,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_insert_item BEFORE INSERT
-  ON shopdb.shopschema.Item
-  FOR EACH ROW EXECUTE PROCEDURE shopdb.shopschema.insert_item();
+ON shopdb.shopschema.Item
+FOR EACH ROW EXECUTE PROCEDURE shopdb.shopschema.insert_item();
 
 CREATE OR REPLACE FUNCTION shopdb.shopschema.insert_card_int() RETURNS TRIGGER AS $$
 BEGIN
@@ -375,42 +391,56 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER tr_insert_card_int BEFORE INSERT
-  ON shopdb.shopschema.Card_Check_INT
-  FOR EACH ROW EXECUTE PROCEDURE shopdb.shopschema.insert_card_int();
+ON shopdb.shopschema.Card_Check_INT
+FOR EACH ROW EXECUTE PROCEDURE shopdb.shopschema.insert_card_int();
 
 --INDEXES AND VIEWS--
 CREATE MATERIALIZED VIEW shopdb.shopschema.items
   AS
-    SELECT c.checkid, c.itemid, c.sku, itemname, sex, type, model, size, color, count,
-      costofpositionwithouttax, costofpositionwithtax , discountofposition, isreturned, date, isbycard,
-      discount, totalcostwithouttax, totalcostwithtax
-    FROM shopdb.shopschema.check_item_int c
-      JOIN shopdb.shopschema.item i ON c.itemid = i.itemid AND c.sku = i.sku
-      JOIN shopdb.shopschema.itemtype i2 ON i.sku = i2.sku
-      JOIN shopdb.shopschema."check" ch ON c.checkid = ch.checkid ORDER BY checkid;
+SELECT c.checkid, c.itemid, c.sku, itemname, sex, type, model, size, color, count,
+  costofpositionwithouttax, costofpositionwithtax , discountofposition, isreturned, date, isbycard,
+  discount, totalcostwithouttax, totalcostwithtax
+  FROM shopdb.shopschema.check_item_int c
+  JOIN shopdb.shopschema.item i ON c.itemid = i.itemid AND c.sku = i.sku
+  JOIN shopdb.shopschema.itemtype i2 ON i.sku = i2.sku
+  JOIN shopdb.shopschema."check" ch ON c.checkid = ch.checkid ORDER BY checkid;
 
 CREATE UNIQUE INDEX IF NOT EXISTS items_index ON shopdb.shopschema.items (checkid, itemid, sku);
 CREATE INDEX IF NOT EXISTS items_date_index ON shopdb.shopschema.items (date);
 
 CREATE MATERIALIZED VIEW shopdb.shopschema.cards_purchases AS
-  SELECT cardid, c1.checkid, c2.date, unnest(purchases[:][1:1]) AS sku, unnest(purchases[:][2:2]) AS itemid, c2.totalcostwithtax
-  FROM shopdb.shopschema.card_check_int c1 JOIN shopdb.shopschema."check" c2 ON c1.checkid = c2.checkid;
+SELECT cardid, c1.checkid, c2.date, unnest(purchases[:][1:1]) AS sku, unnest(purchases[:][2:2]) AS itemid, c2.totalcostwithtax
+FROM shopdb.shopschema.card_check_int c1 JOIN shopdb.shopschema."check" c2 ON c1.checkid = c2.checkid;
 
 CREATE INDEX IF NOT EXISTS cards_date_index ON shopdb.shopschema.cards_purchases (date);
 
-CREATE USER "Admin" WITH
-  LOGIN
-  SUPERUSER
-  CREATEDB
-  CREATEROLE
-  REPLICATION
-  CONNECTION LIMIT -1
-  PASSWORD '1234';
+REFRESH MATERIALIZED VIEW shopdb.shopschema.items;
+REFRESH MATERIALIZED VIEW shopdb.shopschema.cards_purchases;
+SELECT cardid, totalcostwithtax, array_agg(sku) as purchases FROM shopdb.shopschema.cards_purchases GROUP BY cardid, date, totalcostwithtax HAVING date = '2018-01-01' OR date = '2018-01-06';
 
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA shopschema TO "Admin";
-CREATE ROLE "Developer" NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;
-GRANT SELECT (shopCode, shopname, isoutlet, address, city, isclosed, area), UPDATE (shopCode, shopname, isoutlet, address, city, isclosed, area)
-ON TABLE ShopDB.shopschema.shop TO "Developer";
-GRANT SELECT ON TABLE ShopDB.shopschema.check, ShopDB.shopschema.card_check_int, ShopDB.shopschema.check_item_int, ShopDB.shopschema.item, ShopDB.shopschema.itemtype, ShopDB.shopschema.store
-TO "Developer";
-GRANT SELECT (employeecode, firstname, middlename, lastname, position, sex, chief, shopcode) ON TABLE ShopDB.shopschema.employee TO "Developer";
+SELECT cardid, totalcostwithtax::NUMERIC::FLOAT, array_agg(sku) as purchases FROM shopdb.shopschema.cards_purchases GROUP BY cardid, date, totalcostwithtax HAVING date::date = '2018-01-01' OR date::date = '2018-01-07';
+
+
+SELECT count(checkid) as count FROM shopdb.shopschema.Check WHERE date = '2018-01-01';
+SELECT count(sku) as count FROM shopdb.shopschema.items WHERE date = '2018-01-01' AND NOT isreturned;
+SELECT SUM(costofpositionwithtax)::NUMERIC::FLOAT as sum FROM shopdb.shopschema.items WHERE date = '2018-01-01' AND NOT isreturned;
+
+SELECT checkid, sku FROM shopdb.shopschema.items WHERE date = '2018-01-01' OR date = '2018-01-02';
+
+SELECT DISTINCT i1.checkid, i1.sku sku1, i2.sku sku2 FROM shopdb.shopschema.items i1 JOIN shopdb.shopschema.items i2 ON i1.checkid = i2.checkid AND i1.sku > i2.sku
+WHERE i1.date = '2018-01-01' OR i1.date = '2018-01-02';
+
+SELECT * FROM shopdb.shopschema.Check WHERE date::date = '2018-01-01';
+SELECT sku, COUNT(sku) FROM shopdb.shopschema.items WHERE date::date = '2018-01-01' OR date = '2018-01-02' GROUP BY sku;
+
+EXPLAIN ANALYZE
+SELECT cardid FROM "check" JOIN card_check_int ON "check".checkid = card_check_int.checkid WHERE date::date BETWEEN '2018-01-01' AND '2018-01-07';
+
+EXPLAIN ANALYZE
+SELECT DISTINCT cardid FROM cards_purchases WHERE date::date BETWEEN '2018-01-01' AND '2018-01-07';
+
+SELECT cardid, totalcostwithtax::NUMERIC::FLOAT, array_agg(sku) as purchases
+FROM shopdb.shopschema.cards_purchases GROUP BY cardid, date, totalcostwithtax
+HAVING date::date = '2018-01-01' OR date::date = '2018-01-06';
+
+UPDATE "check" SET date = '2018-01-02 1:3:51.123' WHERE checkid = 1;
