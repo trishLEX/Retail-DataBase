@@ -5,10 +5,12 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
+import akka.routing.RoundRobinPool
 import akka.stream.ActorMaterializer
 import spray.json._
 
 object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProtocol {
+  final val COUNT_SERVER_ACTOR = 6
 
   override def main(args: Array[String]): Unit = {
 
@@ -20,14 +22,14 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
     implicit val jsonShopStats = jsonFormat2(ShopStats)
     implicit val jsonCardsStats = jsonFormat4(Card)
 
-    val serverActor = system.actorOf(Props[ServerActor], "serverActor")
+    val serverActor = system.actorOf(RoundRobinPool(COUNT_SERVER_ACTOR).props(Props[ServerActor]), "serverActor")
     val dumpActor = system.actorOf(Props[DumpActor], "dumpActor")
 
     val shopMap = new ShopMap()
 
     val route = {
       post {
-        path("stats") {
+        path("shopstats") {
           entity(as[ShopStats]) {
             stats =>
               parameter('msgid.as[Int], 'shopcode.as[Int]) {
@@ -42,7 +44,7 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
               }
           }
         } ~
-          path("stats") {
+          path("cardstats") {
             entity(as[List[Card]]) {
               stats =>
                 parameter('msgid.as[Int], 'shopcode.as[Int]) {
