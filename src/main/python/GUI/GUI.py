@@ -24,10 +24,10 @@ class Window(QMainWindow):
         self.shopsTabName = "Магазины"
         self.cardsTabName = "Карты"
         self.backButtonName = "Назад"
-        self.commonStatsName = "Общая статистика по магазинам"
+        self.commonStatsName = "Общая статистика магазинов по городам"
         self.shopsStatsName = "Статистика по магазинам"
         self.cardsStatsName = "Статистика по картам"
-        self.chooseTimrStr = "Выюерете преиод времени"
+        self.chooseTimrStr = "Выберете преиод времени"
         self.yearsStr = "Года"
         self.yearStr = "Год"
         self.monthsStr = "Месяцы"
@@ -35,16 +35,16 @@ class Window(QMainWindow):
         self.weeksStr = "Недели"
         self.weekStr = "Неделя"
         self.showTableStr = "Показать таблицу"
-        self.cardStatsLables = ["Количество чеков с картами",
-                                "Отношение количества чеоков с картами к общему числу чеков",
+        self.cardStatsLabels = ["Количество чеков с картами",
+                                "Отношение количества чеков с картами к общему числу чеков",
                                 "Общая сумма продаж в чеках с картами",
-                                "Отношение общей суммы продаж в чеках с картами к сумме во всех чеках"]
+                                "Отношение суммы продаж в чеках с картами к общей сумме"]
         # labels = ["Conversion", "Units per transaction",
         #           "Average check", "Sales per area", "Count of checks", "Returned units", "Count of visitors",
         #           "Proceeds without tax", "Proceeds with tax", "Count of sold units"]
         self.shopStatsLabels = ["Конверсия", "Среднее число товаров в чеке", "Средний чек", "Продажи с кв. метра",
-                                "Количество чеков", "Количество возвратов", "Число посетителей", "Доход с НДС",
-                                "Доход без НДС", "Число проданных товаров"]
+                                "Количество чеков", "Количество возвратов", "Число посетителей", "Доход без НДС",
+                                "Доход с НДС", "Число проданных товаров"]
         self.itemPairsLabels = ["Товар №1", "Товар №2", "Частота"]
         self.itemLabels = ["Товар", "Частота"]
         self.frequencyStr = "Частота"
@@ -156,7 +156,7 @@ class Window(QMainWindow):
         #weeks = [1, 2, 3]
         #years, months, weeks = self.controller.getCardTimes()
 
-        years, months, weeks = self.controller.getShopTimes(itemList[start])
+        years, months, weeks = self.controller.getCardTimes(itemList[start])
 
         shopList = QComboBox()
         shopList.addItems(itemList)
@@ -373,8 +373,6 @@ class Window(QMainWindow):
             stats = self.controller.getCardStats(shopCode, years=dates)
             time = self.yearStr
 
-        print("DATES:", dates)
-
         table = QTableWidget()
         table.setColumnCount(len(dates))
 
@@ -382,17 +380,14 @@ class Window(QMainWindow):
         table.setRowCount(4)
 
         table.setHorizontalHeaderLabels(dates)
-        table.setVerticalHeaderLabels(self.cardStatsLables)
+        table.setVerticalHeaderLabels(self.cardStatsLabels)
         header = table.horizontalHeader()
         header.setFrameStyle(QFrame.Box | QFrame.Plain)
         header.setLineWidth(1)
         table.setHorizontalHeader(header)
 
-        print("STATS:", stats)
-
         for i in range(len(dates)):
             for j in range(4):
-                print(stats[i][j])
                 table.setItem(j, i, QTableWidgetItem(str(stats[i][j])))
 
         table.resizeColumnsToContents()
@@ -400,10 +395,10 @@ class Window(QMainWindow):
         table.horizontalHeader().setStretchLastSection(True)
 
         toExcel = QPushButton(self.toExcelButtonName)
-        toExcel.pressed.connect(lambda: self.toExcelCard(stats, dates, self.cardLabels, time))
+        toExcel.pressed.connect(lambda: self.toExcelCard(stats, dates, self.cardStatsLabels, time))
 
         diagram = QPushButton(self.viewDiagramButtonName)
-        diagram.pressed.connect(lambda: self.viewCardDiagram(stats, dates, self.cardStatsLables, shopName, years, months, weeks))
+        diagram.pressed.connect(lambda: self.viewCardDiagram(stats, dates, self.cardStatsLabels, shopName, years, months, weeks))
 
         vbox = QVBoxLayout(tab2)
         vbox.addWidget(QLabel(shopName))
@@ -416,20 +411,12 @@ class Window(QMainWindow):
         tabBar.show()
 
     def showTableShopWindow(self, shopName, years, months, weeks, isCommon):
-        print(shopName)
-
         if not isCommon:
             shopCode = self.controller.getShopCode(shopName)
         elif shopName != self.controller.wholeCompanyStr:
             city = self.controller.getCityCode(shopName)
-            print("city:", city)
         else:
             city = None
-
-        #print(shopName, "isCommon:", isCommon, shopName, shopCode)
-        print([year.text(0) for year in years])
-        print([month.text(0) for month in months])
-        print([week.text(0) for week in weeks])
 
         tabBar = QTabWidget(self)
         tabBar.resize(self.width, self.height)
@@ -471,8 +458,6 @@ class Window(QMainWindow):
                 stats = self.controller.getCommonShopStats(years=dates, city=city)
                 time = self.yearStr
 
-        print("DATES", dates)
-
         table = QTableWidget()
         table.setColumnCount(10)
         table.setRowCount(len(dates))
@@ -483,8 +468,6 @@ class Window(QMainWindow):
         header.setFrameStyle(QFrame.Box | QFrame.Plain)
         header.setLineWidth(1)
         table.setHorizontalHeader(header)
-
-        print("STATS:", stats)
 
         for i in range(len(dates)):
             for j in range(10):
@@ -529,15 +512,16 @@ class Window(QMainWindow):
                                                          manFreqPairsList, manItemList, womanFreqPairsList, womanItemList))
 
         manFreqPairsTable = QTableWidget()
-        manFreqPairsTable.setRowCount(len(manFreqPairsList)) #TODO брать первые 5 пар или все, но в пределах разумного
+        manFreqPairsTable.setRowCount(len(manFreqPairsList))
         manFreqPairsTable.setColumnCount(3)
         manFreqPairsTable.setHorizontalHeaderLabels(self.itemPairsLabels)
         for i in range(len(manFreqPairsList)):
             for j in range(3):
                 manFreqPairsTable.setItem(i, j, QTableWidgetItem(str(manFreqPairsList[i][j])))
 
-        # manFreqPairsTable.resizeColumnsToContents()
-        # manFreqPairsTable.resizeRowsToContents()
+        manFreqPairsTable.horizontalHeader().setStretchLastSection(True)
+        manFreqPairsTable.resizeColumnsToContents()
+        manFreqPairsTable.resizeRowsToContents()
 
         manItemTable = QTableWidget()
         manItemTable.setRowCount(len(manItemList))
@@ -547,6 +531,10 @@ class Window(QMainWindow):
             for j in range(2):
                 manItemTable.setItem(i, j, QTableWidgetItem(str(manItemList[i][j])))
 
+        manItemTable.horizontalHeader().setStretchLastSection(True)
+        manItemTable.resizeColumnsToContents()
+        manItemTable.resizeRowsToContents()
+
         womanItemTable = QTableWidget()
         womanItemTable.setRowCount(len(womanItemList))
         womanItemTable.setColumnCount(2)
@@ -555,13 +543,21 @@ class Window(QMainWindow):
             for j in range(2):
                 womanItemTable.setItem(i, j, QTableWidgetItem(str(womanItemList[i][j])))
 
+        womanItemTable.horizontalHeader().setStretchLastSection(True)
+        womanItemTable.resizeRowsToContents()
+        womanItemTable.resizeColumnsToContents()
+
         womanFreqPairsTable = QTableWidget()
-        womanFreqPairsTable.setRowCount(len(womanFreqPairsList)) #TODO брать первые 5 пар
+        womanFreqPairsTable.setRowCount(len(womanFreqPairsList))
         womanFreqPairsTable.setColumnCount(3)
         womanFreqPairsTable.setHorizontalHeaderLabels(self.itemPairsLabels)
         for i in range(len(womanFreqPairsList)):
             for j in range(3):
                 womanFreqPairsTable.setItem(i, j, QTableWidgetItem(str(womanFreqPairsList[i][j])))
+
+        womanFreqPairsTable.horizontalHeader().setStretchLastSection(True)
+        womanFreqPairsTable.resizeColumnsToContents()
+        womanFreqPairsTable.resizeRowsToContents()
 
         manPairsButton = QPushButton(self.viewDiagramButtonName)
         manPairsButton.pressed.connect(lambda: self.viewCountFreqDiagram(
@@ -634,7 +630,6 @@ class Window(QMainWindow):
         tabBar.show()
 
     def viewCountFreqDiagram(self, stats, elements, shopName, years, months, days, isCommon, yLabel):
-        print("DIAGRAM:", stats, elements)
         stats = [int(i) for i in stats]
 
         global currentShopPlot
@@ -768,6 +763,7 @@ class Window(QMainWindow):
         chooseLabel = QLabel(self.chooseIndexStr)
         chooseBox = QComboBox()
         chooseBox.addItems(labels)
+        chooseBox.setFixedWidth(350)
 
         hbox.addWidget(pic)
         hbox.addStretch()
@@ -793,7 +789,6 @@ class Window(QMainWindow):
         tabBar.show()
 
     def viewShopDiagram(self, stats, dates, labels, shopName, years, months, days, isCommon, numberOfKPI=0):
-        print("DIAGRAM:", stats)
         hbox = QHBoxLayout()
         global currentShopPlot
 
@@ -807,8 +802,6 @@ class Window(QMainWindow):
                 xs.append(stats[i][numberOfKPI])
 
             bar(index, xs, width=width, zorder=2)
-
-            print(index, dates)
 
             xticks(index, dates, rotation=30, ha="right")
             ylabel(labels[numberOfKPI])
@@ -971,12 +964,10 @@ class Window(QMainWindow):
                     for j in range(len(womanItemList[i])):
                         ws.cell(row=i + 2, column=j + 1).value = str(womanItemList[i][j])
 
-                print(path + '/' + text + ".xlsx")
                 fileStats.save(path + '/' + text + ".xlsx")
 
     def toExcelCard(self, stats, dates, labels, timeName):
         path = QFileDialog().getExistingDirectory(self, self.chooseDirectoryStr)
-
         if path:
 
             text, ok = QInputDialog.getText(self, self.chooseNameStr, self.enterExcelNameStr)
@@ -1005,9 +996,8 @@ class Window(QMainWindow):
                     for j in range(len(stats[i])):
                         ws.cell(row=i + 2, column=j + 2).value = stats[i][j]
 
-                ws.cell(row=0, column=0).value = timeName
+                ws.cell(row=1, column=1).value = timeName
 
-                print(path + '/' + text + ".xlsx")
                 fileStats.save(path + '/' + text + ".xlsx")
 
 
