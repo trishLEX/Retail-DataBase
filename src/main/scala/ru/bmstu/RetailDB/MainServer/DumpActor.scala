@@ -12,17 +12,6 @@ import spray.json._
 class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   private val connectionString = "jdbc:postgresql://localhost:5432/maindb?user=postgres&password=0212"
 
-  private val PATH_TO_DUMPED_STATS = "E:\\Sorry\\Documents\\IdeaProjects\\RetailDB\\src\\main\\scala\\ru\\bmstu\\RetailDB\\MainServer\\DumpedStats"
-
-//  private val monthScheduler = QuartzSchedulerExtension(context.system)
-//  monthScheduler.createSchedule("monthScheduler", cronExpression = "0 0 0 ? * MON *")
-//  //monthScheduler.createSchedule("monthScheduler", cronExpression = "50 34 12 ? * *")
-//  monthScheduler.schedule("monthScheduler", self, "MONTH CARD")
-//
-//  private val yearScheduler = QuartzSchedulerExtension(context.system)
-//  yearScheduler.createSchedule("yearScheduler", cronExpression = "0 0 0 1 JAN ? *")
-//  yearScheduler.schedule("yearScheduler", self, "YEAR CARD")
-
   implicit val jsonStats = jsonFormat12(Stats.apply)
   implicit val jsonCardsStatMap = jsonFormat3(CardStatsMap.apply)
 
@@ -30,16 +19,12 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     case (week: Int, 0, year: Int, shopcode: Int, cards: List[Int]) => dump(week, 0, year, shopcode, cards)
     case (0, month: Int, year: Int, shopcode: Int, cards: List[Int]) => dump(0, month, year, shopcode, cards)
     case (0, 0, year: Int, shopcode: Int, cards: List[Int]) => dump(0, 0, year, shopcode, cards)
-//    case ("MONTH CARD")           => cleanMonthCard()
-//    case ("YEAR CARD")            => cleanYearCard()
   }
 
   private def dump(week: Int, month: Int, year: Int, shopCode: Int, cards: List[Int]) = {
     classOf[org.postgresql.Driver]
 
     val connection = DriverManager.getConnection(connectionString)
-
-    val year = Calendar.getInstance().get(Calendar.YEAR)
 
     try {
       val stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
@@ -63,8 +48,6 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
   private def dumpWeek(connection: Connection, statement: Statement, shopCode: Int, year: Int, week: Int, cards: List[Int]) = {
     val statsOfWeek = getShopStats(connection, statement, shopCode, "Week").parseJson.convertTo[Stats].countStats()
 
-    //println(statsOfWeek)
-
     var insertStmt = connection.prepareStatement("INSERT INTO MainDB.shopschema.Shops_Stats_Weeks (year, week, shopcode, stats) VALUES (?, ?, ?, ?::jsonb);")
     insertStmt.setInt(1, year)
     insertStmt.setInt(2, week)
@@ -84,9 +67,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     preparedStatement.setString(1, json.parseJson.toString())
     preparedStatement.setInt(2, shopCode)
 
-    //println(json.parseJson.prettyPrint)
-
-    //preparedStatement.execute()
+    preparedStatement.execute()
 
     val cardsArray = new PGobject
     cardsArray.setType("INT[]")
@@ -112,7 +93,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       preparedStatement.setString(1, json.parseJson.toString())
       preparedStatement.setInt(2, cardID)
 
-      //preparedStatement.execute()
+      preparedStatement.execute()
     }
 
   }
@@ -139,9 +120,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     preparedStatement.setString(1, json.parseJson.toString)
     preparedStatement.setInt(2, shopCode)
 
-    //println(json.parseJson.prettyPrint)
-
-    //preparedStatement.execute()
+    preparedStatement.execute()
 
     val cardsArray = new PGobject
     cardsArray.setType("INT[]")
@@ -167,7 +146,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       preparedStatement.setString(1, json.parseJson.toString())
       preparedStatement.setInt(2, cardID)
 
-      //preparedStatement.execute()
+      preparedStatement.execute()
     }
   }
 
@@ -192,9 +171,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
     preparedStatement.setString(1, json.parseJson.toString)
     preparedStatement.setInt(2, shopCode)
 
-    //println(json.parseJson.prettyPrint)
-
-    //preparedStatement.execute()
+    preparedStatement.execute()
 
     val cardsArray = new PGobject
     cardsArray.setType("INT[]")
@@ -219,7 +196,7 @@ class DumpActor extends Actor with SprayJsonSupport with DefaultJsonProtocol {
       preparedStatement.setString(1, json.parseJson.toString())
       preparedStatement.setInt(2, cardID)
 
-      //preparedStatement.execute()
+      preparedStatement.execute()
     }
   }
 

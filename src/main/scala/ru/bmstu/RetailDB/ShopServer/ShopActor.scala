@@ -3,7 +3,8 @@ package ru.bmstu.RetailDB.ShopServer
 import java.io.File
 import java.sql._
 import java.util.concurrent.locks.{Lock, ReentrantLock}
-import java.util.{Calendar, Date}
+import java.sql.Date
+import java.util.Calendar
 
 import akka.actor.Actor
 import akka.http.scaladsl.Http
@@ -34,7 +35,6 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
   val lock: Lock = new ReentrantLock()
 
   override def receive: Receive = {
-    //TODO сделать для GO и RESEND константы
     case "GO" => sendStats()
     case "RESEND" => resend()
   }
@@ -47,12 +47,11 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
     println(shopStats)
     println(cardsStats)
 
-    //val shopStats = ShopStats(100, Stats(100, 1, 0, 100, 100, 100, 100, 0, 0, 0)).toJson
     sendCache(new File(ShopServerStarter.PATH_TO_RETAIL_CACHE))
 
-    val shopStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/stats?msgid=" + ShopActor.getMsgID + "&shopcode=" + shopCode,
+    val shopStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/shopstats?msgid=" + ShopActor.getMsgID + "&shopcode=" + shopCode,
       entity = HttpEntity(ContentTypes.`application/json`, shopStats.prettyPrint))
-    val cardsStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/stats?msgid=" + ShopActor.getMsgID + "&shopcode=" + shopCode,
+    val cardsStatsReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cardstats?msgid=" + ShopActor.getMsgID + "&shopcode=" + shopCode,
       entity = HttpEntity(ContentTypes.`application/json`, cardsStats.prettyPrint))
 
     Http(context.system).singleRequest(shopStatsReq).onComplete{
@@ -68,7 +67,6 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
 
   private def sendCntrlMsg() = {
     val now = Calendar.getInstance()
-//    now.setTime(new SimpleDateFormat("yyyy-MM-dd").parse("2018-04-30"))
 
     if (now.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
       val today = Calendar.getInstance()
@@ -81,8 +79,8 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
       val calendar = Calendar.getInstance()
       val cntrlMsg = ControlMessage(0, 0, calendar.get(Calendar.YEAR), shopCode, cards)
 
-      val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrl?WEEK=" + cntrlMsg.week +
-        "&MONTH=" + cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode + "&msgid=" + ShopActor.getMsgID,
+      val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrlWeek?WEEK=" + cntrlMsg.week +
+        cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode + "&msgid=" + ShopActor.getMsgID,
         entity = HttpEntity(ContentTypes.`application/json`, cards.toJson.prettyPrint))
 
       Http(context.system).singleRequest(cntrlMsgReq).onComplete {
@@ -101,8 +99,8 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
       val calendar = Calendar.getInstance()
       val cntrlMsg = ControlMessage(0, 0, calendar.get(Calendar.YEAR), shopCode, cards)
 
-      val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrl?WEEK=" + cntrlMsg.week +
-        "&MONTH=" + cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode + "&msgid=" + ShopActor.getMsgID,
+      val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrlMonth?MONTH=" + cntrlMsg.month +
+        "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode + "&msgid=" + ShopActor.getMsgID,
         entity = HttpEntity(ContentTypes.`application/json`, cards.toJson.prettyPrint))
 
       Http(context.system).singleRequest(cntrlMsgReq).onComplete {
@@ -121,8 +119,7 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
       val calendar = Calendar.getInstance()
       val cntrlMsg = ControlMessage(0, 0, calendar.get(Calendar.YEAR), shopCode, cards)
 
-      val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrl?WEEK=" + cntrlMsg.week +
-        "&MONTH=" + cntrlMsg.month + "&YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode + "&msgid=" + ShopActor.getMsgID,
+      val cntrlMsgReq = HttpRequest(HttpMethods.POST, "http://localhost:8888/cntrlYear?YEAR=" + cntrlMsg.year +"&shopcode=" + cntrlMsg.shopCode + "&msgid=" + ShopActor.getMsgID,
         entity = HttpEntity(ContentTypes.`application/json`, cards.toJson.prettyPrint))
 
       Http(context.system).singleRequest(cntrlMsgReq).onComplete {
@@ -241,10 +238,9 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
     val res = stmt.executeQuery("SELECT countofvisitorstoday, area FROM shopschema.shop;")
     res.next()
 
-    //TODO val preparedStatement = connection.prepareStatement("SELECT count(checkid) as count FROM shopdb.shopschema.Check WHERE date = ?;")
-    //TODO вставить это в production'e preparedStatement.setDate(1, today)
+    var preparedStatement = connection.prepareStatement("SELECT count(checkid) as count FROM shopdb.shopschema.Check WHERE date = ?;")
+    preparedStatement.setDate(1, today)
 
-    var preparedStatement = connection.prepareStatement("SELECT count(checkid) as count FROM shopdb.shopschema.Check WHERE date::date = '2018-01-01';")
     var resultSet = preparedStatement.executeQuery()
     resultSet.next()
 
@@ -253,8 +249,8 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
     val countOfVisitors = res.getString("countofvisitorstoday").toInt
     val CR = countOfChecks.toFloat / countOfVisitors
 
-    preparedStatement = connection.prepareStatement("SELECT count(sku) as count FROM shopdb.shopschema.items WHERE date::date = '2018-01-01';")
-    //preparedStatement.setDate(1, today)
+    preparedStatement = connection.prepareStatement("SELECT count(sku) as count FROM shopdb.shopschema.items WHERE date::date = ?;")
+    preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     resultSet.next()
 
@@ -262,15 +258,15 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
 
     val UPT = countOfSoldUnits.toFloat / countOfChecks
 
-    preparedStatement = connection.prepareStatement("SELECT SUM(costofpositionwithtax)::NUMERIC::FLOAT as sum FROM shopdb.shopschema.items WHERE date::date = '2018-01-01' AND NOT isreturned")
-    //preparedStatement.setDate(1, today)
+    preparedStatement = connection.prepareStatement("SELECT SUM(costofpositionwithtax)::NUMERIC::FLOAT as sum FROM shopdb.shopschema.items WHERE date::date = ? AND NOT isreturned")
+    preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     resultSet.next()
 
     val totalCostWithTax = resultSet.getString("sum").toFloat
 
-    preparedStatement = connection.prepareStatement("SELECT SUM(costofpositionwithouttax)::NUMERIC::FLOAT as sum FROM shopdb.shopschema.items WHERE date::date = '2018-01-01' AND NOT isreturned")
-    //preparedStatement.setDate(1, today)
+    preparedStatement = connection.prepareStatement("SELECT SUM(costofpositionwithouttax)::NUMERIC::FLOAT as sum FROM shopdb.shopschema.items WHERE date::date = ? AND NOT isreturned")
+    preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     resultSet.next()
 
@@ -278,8 +274,8 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
 
     val avgCheck = totalCostWithTax / countOfChecks
 
-    preparedStatement = connection.prepareStatement("SELECT count(sku) as count FROM shopdb.shopschema.items WHERE date::date = '2018-01-01' AND isreturned")
-    //preparedStatement.setDate(1, today)
+    preparedStatement = connection.prepareStatement("SELECT count(sku) as count FROM shopdb.shopschema.items WHERE date::date = ? AND isreturned")
+    preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     resultSet.next()
 
@@ -287,10 +283,9 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
 
     val salesPerArea = totalCostWithTax / res.getString("area").toFloat
 
-    // new items:[{'(1, 2)': 4}, {'(1, 3)': 2}] //
     preparedStatement = connection.prepareStatement("SELECT DISTINCT i1.checkid, i1.sku sku1, i2.sku sku2 " +
-      "FROM shopdb.shopschema.items i1 JOIN shopdb.shopschema.items i2 ON i1.checkid = i2.checkid AND i1.sku > i2.sku WHERE i1.date::date = '2018-01-01' OR i1.date::date = '2018-01-02';")
-    //preparedStatement.setDate(1, today)
+      "FROM shopdb.shopschema.items i1 JOIN shopdb.shopschema.items i2 ON i1.checkid = i2.checkid AND i1.sku > i2.sku WHERE i1.date::date = ?;")
+    preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     var skuPairMap = Map.empty[String, Int]
 
@@ -300,8 +295,8 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
 
     println("skuPairMap: " + skuPairMap)
 
-    preparedStatement = connection.prepareStatement("SELECT sku, COUNT(sku) AS count FROM shopdb.shopschema.items WHERE date::date = '2018-01-01' OR date = '2018-01-02' GROUP BY sku")
-    //preparedStatement.setDate(1, today)
+    preparedStatement = connection.prepareStatement("SELECT sku, COUNT(sku) AS count FROM shopdb.shopschema.items WHERE date::date = ? GROUP BY sku")
+    preparedStatement.setDate(1, today)
     resultSet = preparedStatement.executeQuery()
     var skuMap = Map.empty[String, Int]
 
@@ -313,9 +308,9 @@ class ShopActor(val shopCode: Int) extends Actor with SprayJsonSupport with Defa
       countOfSoldUnits.toInt, UPT, totalCostWithTax, totalCostWithoutTax, avgCheck, returnedUnits, salesPerArea, skuPairMap, skuMap))
   }
 
-  private def getCardsStats(connection: Connection, shopCode: Int, today: Date): List[CardStats] = {
-    val preparedStatement = connection.prepareStatement("SELECT cardid, totalcostwithtax::NUMERIC::FLOAT, array_agg(sku) as purchases FROM shopdb.shopschema.cards_purchases GROUP BY cardid, date, totalcostwithtax HAVING date::date = '2018-01-01' OR date::date = '2018-01-06'")
-    //preparedStatement.setDate(1, today)
+  private def getCardsStats(connection: Connection, shopCode: Int, today: java.sql.Date): List[CardStats] = {
+    val preparedStatement = connection.prepareStatement("SELECT cardid, totalcostwithtax::NUMERIC::FLOAT, array_agg(sku) as purchases FROM shopdb.shopschema.cards_purchases GROUP BY cardid, date, totalcostwithtax HAVING date::date = ?")
+    preparedStatement.setDate(1, today)
     val resultSet = preparedStatement.executeQuery()
 
     def iter: Iterator[ResultSet] = new Iterator[ResultSet] {

@@ -42,8 +42,8 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
                     HttpResponse(StatusCodes.OK)
                   }
               }
-          }
-        } ~
+            }
+          } ~
           path("cardstats") {
             entity(as[List[Card]]) {
               stats =>
@@ -59,26 +59,38 @@ object MainServerStarter extends App with SprayJsonSupport with DefaultJsonProto
                 }
             }
           } ~
-          path("cntrl") {
+          path("cntrlWeek") {
             entity(as[List[Int]]) { cards =>
-              parameter('WEEK.as[Int], 'MONTH.as[Int], 'YEAR.as[Int], 'shopcode.as[Int], 'msgid.as[Int]) {
-                case (0, 0, year, shopcode, msgID) => complete {
-                  if (!shopMap.contains(shopcode, msgID)) {
-                    dumpActor ! (0, 0, year, shopcode, cards)
-                    shopMap.put(shopcode, msgID)
-                  }
-                  HttpResponse(StatusCodes.OK)
-                }
-                case (week, 0, year, shopcode, msgID) => complete {
+              parameter('WEEK.as[Int], 'YEAR.as[Int], 'shopcode.as[Int], 'msgid.as[Int]) {
+                case (week, year, shopcode, msgID) => complete {
                   if (!shopMap.contains(shopcode, msgID)) {
                     dumpActor ! (week, 0, year, shopcode, cards)
                     shopMap.put(shopcode, msgID)
                   }
                   HttpResponse(StatusCodes.OK)
                 }
-                case (0, month, year, shopcode, msgID) => complete {
+              }
+            }
+          } ~
+          path("cntrlMonth") {
+            entity(as[List[Int]]) { cards =>
+              parameter('MONTH.as[Int], 'YEAR.as[Int], 'shopcode.as[Int], 'msgid.as[Int]) {
+                case (month, year, shopcode, msgID) => complete {
                   if (!shopMap.contains(shopcode, msgID)) {
                     dumpActor ! (0, month, year, shopcode, cards)
+                    shopMap.put(shopcode, msgID)
+                  }
+                  HttpResponse(StatusCodes.OK)
+                }
+              }
+            }
+          } ~
+          path("cntrlYear") {
+            entity(as[List[Int]]) { cards =>
+              parameter('YEAR.as[Int], 'shopcode.as[Int], 'msgid.as[Int]) {
+                case (year, shopcode, msgID) => complete {
+                  if (!shopMap.contains(shopcode, msgID)) {
+                    dumpActor ! (0, 0, year, shopcode, cards)
                     shopMap.clear(shopcode)
                   }
                   HttpResponse(StatusCodes.OK)
